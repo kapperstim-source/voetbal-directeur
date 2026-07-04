@@ -269,15 +269,15 @@ tbody tr:last-child td{border-bottom:none}
 .cmt.injury{color:var(--warn)}
 @keyframes fadein{to{opacity:1}}
 /* ---------- 2D wedstrijd-animatie ---------- */
-.pitch2d{position:relative;width:100%;aspect-ratio:16/9;max-height:300px;background:repeating-linear-gradient(90deg,#168a45 0 8%,#149040 8% 16%);border-radius:12px;border:1px solid rgba(255,255,255,.12);overflow:hidden;margin-bottom:8px;box-shadow:inset 0 0 50px rgba(0,0,0,.4)}
+.pitch2d{position:relative;width:100%;aspect-ratio:16/9;max-height:340px;background:radial-gradient(130% 90% at 50% 0%,rgba(255,255,255,.10),rgba(255,255,255,0) 55%),repeating-linear-gradient(90deg,#1a9a4b 0 6.25%,#158340 6.25% 12.5%);border-radius:14px;border:1px solid rgba(255,255,255,.16);overflow:hidden;margin-bottom:8px;box-shadow:inset 0 0 60px rgba(0,0,0,.45),0 6px 22px rgba(0,0,0,.35)}
+.pitch2d::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(135% 105% at 50% 48%,transparent 52%,rgba(0,0,0,.42));z-index:1}
 .pitch2d.goalflash{animation:gflash .6s}
-@keyframes gflash{0%,100%{filter:none}30%{filter:brightness(1.7)}}
-.p2d-line{position:absolute;left:50%;top:2%;bottom:2%;width:2px;background:rgba(255,255,255,.3);transform:translateX(-1px)}
-.p2d-circle{position:absolute;left:50%;top:50%;width:18%;aspect-ratio:1;border:2px solid rgba(255,255,255,.3);border-radius:50%;transform:translate(-50%,-50%)}
-.p2d-goal{position:absolute;top:38%;height:24%;width:6px;background:rgba(255,255,255,.6)}
-.p2d-goal.l{left:0}.p2d-goal.r{right:0}
-.p2d-dot{position:absolute;width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.7);transform:translate(-50%,-50%);transition:left .22s linear,top .22s linear;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.p2d-ball{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);transition:left .2s ease,top .2s ease;z-index:3;box-shadow:0 0 6px rgba(255,255,255,.8)}
+@keyframes gflash{0%,100%{filter:none}30%{filter:brightness(1.6) saturate(1.2)}}
+.p2d-svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.p2d-dot{position:absolute;width:17px;height:17px;border-radius:50%;border:1.5px solid rgba(255,255,255,.9);transform:translate(-50%,-50%);transition:left .34s cubic-bezier(.42,.08,.34,1),top .34s cubic-bezier(.42,.08,.34,1);box-shadow:0 2px 5px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;line-height:1;z-index:2;letter-spacing:-.3px}
+.p2d-ball{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#c6d0da);transform:translate(-50%,-50%);transition:left .3s ease-out,top .3s ease-out;z-index:4;box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}
+.p2d-ball.kick{animation:ballkick .32s ease-out}
+@keyframes ballkick{0%{box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}40%{box-shadow:0 0 16px 5px rgba(255,255,255,.95),0 2px 3px rgba(0,0,0,.5)}100%{box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}}
 .momentum{height:8px;background:var(--bad);border-radius:5px;overflow:hidden}
 .momentum > i{display:block;height:100%;width:50%;background:var(--accent);transition:width .3s}
 /* ---------- effecten ---------- */
@@ -8189,32 +8189,67 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const ys = [50, 18, 82, 38, 62, 30, 50, 70, 32, 50, 68];
     return { x: xs[i], y: ys[i] };
   }
+  const PITCH_SVG = '<svg class="p2d-svg" viewBox="0 0 100 56.25" preserveAspectRatio="none">'
+    + '<g fill="none" stroke="rgba(255,255,255,.36)" stroke-width="0.35">'
+    + '<rect x="2" y="2" width="96" height="52.25" rx="0.5"/>'
+    + '<line x1="50" y1="2" x2="50" y2="54.25"/>'
+    + '<circle cx="50" cy="28.13" r="8.5"/>'
+    + '<rect x="2" y="13.6" width="15" height="29"/><rect x="2" y="21.1" width="5.5" height="14"/>'
+    + '<path d="M17 22.11 A8.5 8.5 0 0 1 17 34.15"/>'
+    + '<rect x="83" y="13.6" width="15" height="29"/><rect x="92.5" y="21.1" width="5.5" height="14"/>'
+    + '<path d="M83 22.11 A8.5 8.5 0 0 0 83 34.15"/>'
+    + '<path d="M2 4 A2 2 0 0 1 4 2"/><path d="M96 2 A2 2 0 0 1 98 4"/>'
+    + '<path d="M4 54.25 A2 2 0 0 1 2 52.25"/><path d="M98 52.25 A2 2 0 0 1 96 54.25"/>'
+    + '</g>'
+    + '<g fill="rgba(255,255,255,.65)"><circle cx="50" cy="28.13" r="0.55"/><circle cx="11" cy="28.13" r="0.55"/><circle cx="89" cy="28.13" r="0.55"/></g>'
+    + '<g fill="rgba(255,255,255,.28)"><rect x="0.4" y="24.6" width="1.6" height="7"/><rect x="98" y="24.6" width="1.6" height="7"/></g>'
+    + '</svg>';
+  function pitchNum(i) { return [1, 2, 5, 6, 3, 4, 8, 10, 7, 9, 11][i] || (i + 1); }
   function buildPitch() {
     const wrap = document.getElementById("mpitch"); if (!wrap || !live) return;
     const G = GAME.getState(); const hc = G.clubs[live.M.home.club].col[0], ac = G.clubs[live.M.away.club].col[0];
-    let html = '<div class="p2d-line"></div><div class="p2d-circle"></div><div class="p2d-goal l"></div><div class="p2d-goal r"></div>';
-    for (let i = 0; i < 11; i++) html += `<div class="p2d-dot" id="ph${i}" style="background:${hc};color:${contrast(hc)}"></div>`;
-    for (let i = 0; i < 11; i++) html += `<div class="p2d-dot" id="pa${i}" style="background:${ac};color:${contrast(ac)}"></div>`;
+    let html = PITCH_SVG;
+    for (let i = 0; i < 11; i++) html += `<div class="p2d-dot" id="ph${i}" style="background:${hc};color:${contrast(hc)}">${pitchNum(i)}</div>`;
+    for (let i = 0; i < 11; i++) html += `<div class="p2d-dot" id="pa${i}" style="background:${ac};color:${contrast(ac)}">${pitchNum(i)}</div>`;
     if (["Regen", "Sneeuw"].includes(live.M.weather)) html += `<div class="weatherfx ${live.M.weather === "Regen" ? "rain" : "snow"}"></div>`; // weer-visual (#193)
     html += '<div class="p2d-ball" id="pball"></div>';
     wrap.innerHTML = html;
     live.ball = { x: 50, y: 50 };
-    positionPitch(true);
+    live.noiseH = Array.from({ length: 11 }, () => ({ x: 0, y: 0 }));
+    live.noiseA = Array.from({ length: 11 }, () => ({ x: 0, y: 0 }));
+    positionPitch();
   }
-  function positionPitch(jitter) {
+  function _cl(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function teamPush(home) { const mo = live.M.momentum || 0; const f = home ? mo : -mo; return _cl(f * 0.11, -5, 9); } // druk-team schuift op
+  function placeTeam(home, bx, by) {
+    const noise = home ? live.noiseH : live.noiseA; if (!noise) return;
+    const push = teamPush(home);
+    for (let i = 0; i < 11; i++) {
+      const b = dotBase(i, home); const el = document.getElementById((home ? "ph" : "pa") + i); if (!el) continue;
+      const n = noise[i]; // trage organische drift i.p.v. per-tick trillen
+      n.x = _cl(n.x + (Math.random() - 0.5) * 1.3, -3.2, 3.2);
+      n.y = _cl(n.y + (Math.random() - 0.5) * 1.5, -4, 4);
+      const gk = i === 0, pull = gk ? 0.03 : 0.13;
+      const tx = _cl(b.x + (gk ? 0 : push) + (bx - b.x) * pull + n.x, 3, 97);
+      const ty = _cl(b.y + (by - b.y) * pull + n.y, 6, 94);
+      el.style.left = tx + "%"; el.style.top = ty + "%";
+    }
+  }
+  function positionPitch() {
     if (!live) return;
-    for (let i = 0; i < 11; i++) { const b = dotBase(i, true); const el = document.getElementById("ph" + i); if (el) el.style.left = (b.x + (jitter ? (Math.random() * 8 - 4) : 0)) + "%", el.style.top = (b.y + (jitter ? (Math.random() * 10 - 5) : 0)) + "%"; }
-    for (let i = 0; i < 11; i++) { const b = dotBase(i, false); const el = document.getElementById("pa" + i); if (el) el.style.left = (b.x + (jitter ? (Math.random() * 8 - 4) : 0)) + "%", el.style.top = (b.y + (jitter ? (Math.random() * 10 - 5) : 0)) + "%"; }
+    const bx = live.ball ? live.ball.x : 50, by = live.ball ? live.ball.y : 50;
+    placeTeam(true, bx, by); placeTeam(false, bx, by);
     const ball = document.getElementById("pball"); if (ball && live.ball) { ball.style.left = live.ball.x + "%"; ball.style.top = live.ball.y + "%"; }
   }
   function stepPitch(evs) {
     if (!live || !live.ball) return;
     const goal = evs.find(e => e.type === "goal");
     const att = evs.find(e => ["goal", "save", "var", "varok", "chance"].includes(e.type));
-    if (goal) { const homeGoal = goal.team === live.M.home.club; live.ball.x = homeGoal ? 96 : 4; live.ball.y = 50; }
-    else if (att) { const homeAtt = att.team === live.M.home.club; live.ball.x = homeAtt ? 84 : 16; live.ball.y = 30 + Math.random() * 40; }
-    else { live.ball.x = Math.max(8, Math.min(92, 50 + (live.M.momentum || 0) * 0.35)); live.ball.y = 35 + Math.random() * 30; }
-    positionPitch(true);
+    if (goal) { const homeGoal = goal.team === live.M.home.club; live.ball.x = homeGoal ? 97 : 3; live.ball.y = 46 + Math.random() * 8; }
+    else if (att) { const homeAtt = att.team === live.M.home.club; live.ball.x = homeAtt ? 86 : 14; live.ball.y = 30 + Math.random() * 26; }
+    else { live.ball.x = _cl(50 + (live.M.momentum || 0) * 0.4, 12, 88); live.ball.y = 34 + Math.random() * 28; }
+    positionPitch();
+    const ball = document.getElementById("pball"); if (ball && (goal || att)) { ball.classList.remove("kick"); void ball.offsetWidth; ball.classList.add("kick"); }
     if (goal) { const wrap = document.getElementById("mpitch"); if (wrap) { wrap.classList.add("goalflash"); setTimeout(() => wrap && wrap.classList.remove("goalflash"), 700); } }
   }
 
