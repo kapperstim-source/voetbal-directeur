@@ -279,6 +279,87 @@ tbody tr:last-child td{border-bottom:none}
 .p2d-ball{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#c6d0da);transform:translate(-50%,-50%);transition:left .26s ease-out,top .26s ease-out;z-index:5;box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}
 .p2d-ball.kick{animation:ballkick .32s ease-out}
 @keyframes ballkick{0%{box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}40%{box-shadow:0 0 16px 5px rgba(255,255,255,.95),0 2px 3px rgba(0,0,0,.5)}100%{box-shadow:0 0 9px 2px rgba(255,255,255,.7),0 2px 3px rgba(0,0,0,.5)}}
+/* ===== WOW-laag ===== */
+/* (7) vloedlicht + nacht */
+.p2d-lights{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 12% 6%,rgba(255,255,240,.16),transparent 22%),radial-gradient(circle at 88% 6%,rgba(255,255,240,.16),transparent 22%),radial-gradient(circle at 12% 94%,rgba(255,255,240,.12),transparent 20%),radial-gradient(circle at 88% 94%,rgba(255,255,240,.12),transparent 20%)}
+.p2d-cam.night{filter:brightness(.86) saturate(1.05)}
+.p2d-cam.night .p2d-lights{background:radial-gradient(circle at 12% 5%,rgba(230,240,255,.30),transparent 26%),radial-gradient(circle at 88% 5%,rgba(230,240,255,.30),transparent 26%),radial-gradient(circle at 12% 95%,rgba(230,240,255,.22),transparent 24%),radial-gradient(circle at 88% 95%,rgba(230,240,255,.22),transparent 24%)}
+/* (7)+(9) camera-flitsers */
+.cam-flash{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 7px 3px rgba(255,255,255,.9);z-index:6;pointer-events:none;animation:camflash .55s ease-out forwards}
+@keyframes camflash{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.6)}}
+/* (9) grote-moment-flits */
+.big-moment{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:7;font-family:var(--display,inherit);font-weight:900;font-size:clamp(28px,7vw,60px);letter-spacing:2px;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,.6);background:rgba(0,0,0,.28);pointer-events:none;animation:bmin .28s ease-out}
+.big-moment.red{color:#ff5d5d;background:rgba(120,0,0,.30)}
+.big-moment.var{color:#8fd0ff}
+.big-moment.save{color:#ffe08a}
+.big-moment.out{opacity:0;transition:opacity .4s}
+@keyframes bmin{0%{opacity:0;transform:scale(1.3)}100%{opacity:1;transform:scale(1)}}
+/* (1) xG-race */
+.xg-race{margin-top:8px}
+.xg-race:empty{display:none}
+.xg-head{display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:3px}
+.xg-svg{width:100%;height:54px;display:block;background:rgba(255,255,255,.03);border-radius:8px}
+/* (5) derby-aftrap */
+.kickoff-intro.derby{background:radial-gradient(circle at 50% 40%,rgba(180,20,20,.55),rgba(10,10,14,.94))}
+.ko-derby{font-family:var(--display,inherit);font-weight:900;font-size:clamp(20px,5vw,34px);color:#ff6b6b;letter-spacing:3px;margin-bottom:8px;text-shadow:0 2px 14px rgba(255,60,60,.5);animation:bmin .4s ease-out}
+.ko-balance{margin-top:8px;font-size:12px;color:#ffd7d7;opacity:.9}
+/* (4) badge-popup + grid */
+.badge-pop{position:fixed;top:18px;right:18px;z-index:9999;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;background:linear-gradient(135deg,#1a2233,#0e1420);border:1px solid var(--gold,#f0c040);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.5);transform:translateX(120%);transition:transform .5s cubic-bezier(.2,.9,.3,1)}
+.badge-pop.show{transform:translateX(0)}
+.bp-medal svg{width:34px;height:34px;display:block}
+.bp-k{font-size:10.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold,#f0c040)}
+.bp-n{font-weight:800;font-size:15px}
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.badge-cell{text-align:center;padding:12px 6px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+.badge-cell.on{background:linear-gradient(160deg,rgba(240,192,64,.16),rgba(240,192,64,.03));border-color:rgba(240,192,64,.4)}
+.badge-cell.off{opacity:.5;filter:grayscale(1)}
+.bc-ico{font-size:22px;line-height:1;margin-bottom:6px}.bc-ico svg{width:30px;height:30px;display:inline-block}
+.bc-nm{font-size:11px;font-weight:600;line-height:1.25}
+/* (6) trofeekast */
+.tc-cups{display:flex;flex-wrap:wrap;gap:14px}
+.tc-cup{text-align:center;min-width:92px}
+.tc-cup-ico svg{width:44px;height:44px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.tc-cup-n{font-weight:800;font-size:13px;margin-top:4px}
+.tc-cup-y{font-size:10.5px;margin-top:2px}
+.tc-timeline{display:flex;gap:4px;overflow-x:auto;padding:6px 2px}
+.tc-node{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:40px}
+.tc-yr{font-size:10px;color:var(--muted,#90a2c4)}
+.tc-dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.18)}
+.tc-node.gold .tc-dot{background:var(--gold,#f0c040);box-shadow:0 0 8px rgba(240,192,64,.7)}
+.tc-node.silver .tc-dot{background:#b9c6db}
+.tc-fin{font-size:11px;font-weight:700}
+/* (2) krant */
+.news-front{background:#f4f1e9;color:#161616;border-radius:6px;padding:20px 22px;max-width:640px;font-family:Georgia,'Times New Roman',serif}
+.news-front .close-x{color:#161616}
+.nf-masthead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px double #161616;padding-bottom:6px}
+.nf-title{font-weight:900;font-size:clamp(22px,5vw,34px);letter-spacing:1px;font-family:Georgia,serif}
+.nf-date{font-size:11px;font-style:italic}
+.nf-head{font-weight:900;font-size:clamp(20px,4.6vw,30px);line-height:1.12;margin:12px 0;font-family:Georgia,serif}
+.nf-grid{display:grid;grid-template-columns:130px 1fr;gap:16px}
+@media(max-width:520px){.nf-grid{grid-template-columns:1fr}}
+.nf-photo{text-align:center}.nf-photo svg{width:100%;max-width:120px;border-radius:6px}
+.nf-cap{font-size:10.5px;font-style:italic;color:#444;margin-top:4px}
+.nf-standfirst{font-weight:700;font-size:14px;margin-bottom:6px}
+.nf-cols{font-size:13px;line-height:1.5;column-gap:14px}
+.nf-cols p{margin:0 0 8px}
+.nf-pull{border-left:3px solid #161616;padding-left:10px;margin:10px 0;font-size:15px;font-style:italic;font-weight:700}
+.nf-strip{border-top:2px solid #161616;margin-top:12px;padding-top:8px;display:flex;flex-wrap:wrap;gap:8px;font-size:11px;font-weight:700}
+.nf-strip span{background:#161616;color:#f4f1e9;padding:2px 7px;border-radius:3px}
+/* (3) awards-gala */
+.gala{position:relative;text-align:center;overflow:hidden}
+.gala-glow{position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:140%;height:70%;background:radial-gradient(circle,rgba(240,192,64,.22),transparent 65%);pointer-events:none}
+.gala-kicker{font-size:11px;letter-spacing:3px;color:var(--gold,#f0c040);text-transform:uppercase;font-weight:700}
+.gala-head h2{margin:4px 0 14px}
+.award-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+@media(max-width:520px){.award-list{grid-template-columns:1fr}}
+.award-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:linear-gradient(160deg,rgba(240,192,64,.12),rgba(255,255,255,.02));border:1px solid rgba(240,192,64,.28)}
+.award-card svg{width:42px;height:42px;flex:0 0 auto}
+.aw-k{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--gold,#f0c040);font-weight:700}
+.aw-n{font-weight:800;font-size:15px}
+.gala-xi{margin-top:14px;text-align:left}
+.gala-xi-row{display:flex;flex-wrap:wrap;gap:5px}
+/* (10) in-vorm */
+.form-hot,.form-cold{font-size:14px;vertical-align:middle}
 .momentum{height:8px;background:var(--bad);border-radius:5px;overflow:hidden}
 .momentum > i{display:block;height:100%;width:50%;background:var(--accent);transition:width .3s}
 /* ---------- effecten ---------- */
@@ -7949,7 +8030,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <p class="muted" style="font-size:11px;margin-top:6px">Een hogere status verwacht meer minuten. Te weinig speeltijd maakt hem ontevreden en kan tot een transferverzoek leiden.</p>
       </div>` : "";
     modal(`<span class="close-x" onclick="UI.closeModal()">×</span>
-      <h3 style="display:flex;align-items:center;gap:10px">${playerAvatar(p, 36)}<span>${p.name} ${ovrBadge(p.ovr)} ${p.isLegend ? "<span class='pill gold'>legende</span>" : ""}</span></h3>
+      <h3 style="display:flex;align-items:center;gap:10px">${playerAvatar(p, 36)}<span>${p.name} ${ovrBadge(p.ovr)} ${formBadge(p)} ${p.isLegend ? "<span class='pill gold'>legende</span>" : ""}</span></h3>
       <div class="flexbar" style="margin-bottom:6px">${posChip(p.pos)}${p.pos2 ? ` <span class="muted">/ ${p.pos2}</span>` : ""} <span class="muted">${D.POSITIONS[p.pos].label}</span><span class="spacer"></span><span class="muted">${p.nat} · ${p.age} jr · ${p.personality || ""}</span></div>
       <div class="center" style="margin:2px 0 6px">${radarSVG(a)}</div>
       <div class="grid2">
@@ -8099,6 +8180,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div id="mmeta" class="flexbar" style="font-size:12px;margin-bottom:8px"></div>
         <div id="mpitch" class="pitch2d"></div>
         <div class="momentum" id="mmomentum"><i></i></div>
+        <div id="mxg" class="xg-race"></div>
         <div id="mstats" style="margin-top:8px"></div>
         <div class="commentary" id="mcomm"></div>
         <div class="center" id="mafter" style="margin-top:14px"></div>
@@ -8121,11 +8203,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const wrap = document.getElementById("mpitch"); if (!wrap || !live) return;
     const G = GAME.getState(), M = live.M;
     const hc = G.clubs[M.home.club], ac = G.clubs[M.away.club];
-    const d = document.createElement("div"); d.className = "kickoff-intro";
-    d.innerHTML = `<div class="ko-row"><span class="ko-team ko-l">${hc.name}</span><span class="ko-vs">VS</span><span class="ko-team ko-r">${ac.name}</span></div><div class="ko-whistle">▶ AFTRAP</div>`;
+    const riv = matchRival(M.home.club, M.away.club);
+    const d = document.createElement("div"); d.className = "kickoff-intro" + (riv ? " derby" : "");
+    const tag = riv ? `<div class="ko-derby">${riv.derby ? "🔥 DE DERBY" : "🔥 DE KRAKER"}</div>` : "";
+    const balance = riv && riv.bal ? `<div class="ko-balance">Onderling: ${riv.bal.w}W · ${riv.bal.d}G · ${riv.bal.l}V · intensiteit ${riv.intensity}</div>` : "";
+    d.innerHTML = `${tag}<div class="ko-row"><span class="ko-team ko-l">${hc.name}</span><span class="ko-vs">VS</span><span class="ko-team ko-r">${ac.name}</span></div>${balance}<div class="ko-whistle">▶ AFTRAP</div>`;
     wrap.appendChild(d);
-    setTimeout(() => d.classList.add("out"), 1300);
-    setTimeout(() => d.remove(), 1700);
+    if (riv) { try { global.AUDIO && global.AUDIO.whistle && global.AUDIO.whistle(); } catch (e) { } }
+    setTimeout(() => d.classList.add("out"), riv ? 1900 : 1300);
+    setTimeout(() => d.remove(), riv ? 2300 : 1700);
   }
   function quickPlay(type) {
     const G = GAME.getState(); const nm = GAME.getNextUserMatch(); if (!nm || !nm.fixture) return;
@@ -8157,7 +8243,19 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const comm = $("#mcomm");
     evs.forEach(ev => addComment(comm, ev));
     const goalEv = evs.find(e => e.type === "goal");
-    if (goalEv) { goalOverlay(goalEv); try { global.AUDIO.goal(); } catch (e) { } }
+    if (goalEv) {
+      goalOverlay(goalEv); try { global.AUDIO.goal(); } catch (e) { }
+      cameraFlash(10); // (7) camera-flitsers bij een goal
+      const bu = goalBuildup(goalEv); if (bu) addComment(comm, { type: "goal", text: "▸ " + bu }); // (8) doelpunt-opbouw
+    }
+    // (9) grote-moment-flits + camera-punch
+    const redEv = evs.find(e => e.type === "red"), varEv = evs.find(e => e.type === "var"), saveEv = evs.find(e => e.type === "save");
+    if (redEv) bigMomentFlash("RODE KAART", "red");
+    else if (varEv) bigMomentFlash("VAR…", "var");
+    else if (saveEv && Math.random() < 0.5) bigMomentFlash("REDDING!", "save");
+    // (1) xG-race bijhouden
+    if (!live.xgHist) live.xgHist = [{ m: 0, h: 0, a: 0 }];
+    live.xgHist.push({ m: live.minute, h: M.stats.xgH, a: M.stats.xgA });
     $("#mscore").textContent = `${M.hg} : ${M.ag}`;
     if ($("#mclock")) $("#mclock").textContent = (live.minute > 90 ? "90+" + (live.minute - 90) : live.minute) + "'";
     // slotfase-spanning: bij een nek-aan-nek stand loopt vanaf 85' de druk op
@@ -8165,7 +8263,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       const p = document.getElementById("mlivepanel");
       if (p && !p.classList.contains("slotfase")) { p.classList.add("slotfase"); addComment($("#mcomm"), { type: "", text: "⏱️ Slotfase! Bij deze stand kan het nog alle kanten op — de spanning is om te snijden." }); }
     }
-    stepPitch(evs); updateMomentum(); renderStats();
+    stepPitch(evs); updateMomentum(); renderStats(); renderXgRace();
     if (M.forcedSub) { handleForced(M.forcedSub); M.forcedSub = null; }
     maybeAiSubs();
     if (!live.halftime && live.minute >= 45) { live.halftime = true; live.paused = true; renderLiveCtrl(); showHalftime(); }
@@ -8214,7 +8312,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     for (let i = 0; i < 11; i++) html += `<div class="p2d-dot" id="pa${i}" style="background:${ac};color:${contrast(ac)}">${pitchNum(i)}</div>`;
     if (["Regen", "Sneeuw"].includes(live.M.weather)) html += `<div class="weatherfx ${live.M.weather === "Regen" ? "rain" : "snow"}"></div>`; // weer-visual (#193)
     html += '<div class="p2d-ball" id="pball"></div>';
-    wrap.innerHTML = '<div class="p2d-cam" id="pcam">' + html + '</div>'; // camera-laag draagt veld + spelers + bal
+    const night = live.type !== "league" || ["Regen", "Sneeuw"].includes(live.M.weather); // bekers/Europa/slecht weer = avondsfeer met vloedlicht
+    html += '<div class="p2d-lights"></div>'; // vloedlicht-gloeden
+    wrap.innerHTML = '<div class="p2d-cam' + (night ? " night" : "") + '" id="pcam">' + html + '</div>'; // camera-laag draagt veld + spelers + bal
     live.ball = { x: 50, y: 50 };
     live.possTeam = null;
     live.noiseH = Array.from({ length: 11 }, () => ({ x: 0, y: 0 }));
@@ -8282,6 +8382,177 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const ball = document.getElementById("pball"); if (ball) { ball.style.left = nb.x + "%"; ball.style.top = nb.y + "%"; if (goal || att) { ball.classList.remove("kick"); void ball.offsetWidth; ball.classList.add("kick"); } }
     moveCamera(evs);
     if (goal) { const wrap = document.getElementById("mpitch"); if (wrap) { wrap.classList.add("goalflash"); setTimeout(() => wrap && wrap.classList.remove("goalflash"), 700); } }
+  }
+
+  // ============================================================ WOW-LAAG (10 extra's)
+  // (1) LIVE xG-RACE — een meegroeiende grafiek onder het veld
+  function renderXgRace() {
+    const el = document.getElementById("mxg"); if (!el || !live || !live.M) return;
+    const hist = live.xgHist || []; if (hist.length < 2) { el.innerHTML = ""; return; }
+    const G = GAME.getState(), M = live.M; const uHome = M.home === live.userSide;
+    const myCol = (G.clubs[live.userSide.club].col[0]) || "#16e58f", opCol = "#8894ad";
+    const W = 300, H = 54, maxX = 90 + (live.extra || 0);
+    const maxY = Math.max(1.2, ...hist.map(p => Math.max(p.h, p.a)));
+    const path = (key) => hist.map((p) => `${(p.m / maxX * W).toFixed(1)},${(H - p[key] / maxY * (H - 6) - 3).toFixed(1)}`).join(" ");
+    const myKey = uHome ? "h" : "a", opKey = uHome ? "a" : "h";
+    const myXg = (uHome ? M.stats.xgH : M.stats.xgA), opXg = (uHome ? M.stats.xgA : M.stats.xgH);
+    el.innerHTML = `<div class="xg-head"><span style="color:${myCol}">● Jij ${myXg.toFixed(2)} xG</span><span class="muted">verwachte goals</span><span style="color:${opCol}">${opXg.toFixed(2)} xG ●</span></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="xg-svg">
+        <line x1="0" y1="${H - 3}" x2="${W}" y2="${H - 3}" stroke="rgba(255,255,255,.12)"/>
+        <polyline points="${path(opKey)}" fill="none" stroke="${opCol}" stroke-width="2" opacity=".8"/>
+        <polyline points="${path(myKey)}" fill="none" stroke="${myCol}" stroke-width="2.4"/>
+      </svg>`;
+  }
+  // (7)+(9) camera-flitsers + grote-moment-flits
+  function cameraFlash(n) {
+    const cam = document.getElementById("pcam"); if (!cam) return;
+    for (let i = 0; i < (n || 8); i++) { const s = document.createElement("i"); s.className = "cam-flash"; s.style.left = (Math.random() * 100) + "%"; s.style.top = (Math.random() < 0.5 ? Math.random() * 22 : 78 + Math.random() * 20) + "%"; s.style.animationDelay = (Math.random() * 0.5).toFixed(2) + "s"; cam.appendChild(s); setTimeout(() => s.remove(), 900); }
+  }
+  function bigMomentFlash(label, tone) {
+    const wrap = document.getElementById("mpitch"); if (!wrap) return;
+    const d = document.createElement("div"); d.className = "big-moment " + (tone || ""); d.textContent = label; wrap.appendChild(d);
+    const panel = document.getElementById("mlivepanel"); if (panel) { panel.classList.add("shake"); setTimeout(() => panel.classList.remove("shake"), 500); }
+    setTimeout(() => d.classList.add("out"), 900); setTimeout(() => d.remove(), 1300);
+  }
+  // (8) DOELPUNT-OPBOUW — "zo viel-ie"
+  function goalBuildup(ev) {
+    if (!live || !ev) return "";
+    const side = ev.team === live.M.home.club ? live.M.home : live.M.away;
+    const names = (side.xi || []).map(id => side.players && side.players[id]).filter(Boolean).map(p => lastName(p.name));
+    const scorer = ev.player && GAME.getState().players[ev.player] ? lastName(GAME.getState().players[ev.player].name) : (names[0] || "");
+    const pool = names.filter(n => n !== scorer);
+    const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2));
+    const chain = shuffled.concat([scorer]);
+    const styles = [
+      `Vloeiende aanval: ${chain.join(" → ")} — en het is raak!`,
+      `${shuffled[0] || scorer} met de steekpass, ${scorer} werkt 'm binnen.`,
+      `Knappe combinatie over ${chain.length} man, ${scorer} maakt het af.`,
+      `Snelle omschakeling en ${scorer} is er als de kippen bij.`
+    ];
+    return styles[Math.floor(Math.random() * styles.length)];
+  }
+  // (5) DERBY / KRAKER — is de tegenstander een rivaal?
+  function matchRival(homeId, awayId) {
+    try {
+      const G = GAME.getState(); const opp = homeId === G.clubId ? awayId : homeId;
+      const derby = global.COMP && global.COMP.isDerby && global.COMP.isDerby(homeId, awayId);
+      const riv = G.rivalries && G.rivalries[opp];
+      if (derby || (riv && riv.intensity >= 30)) return { opp, intensity: riv ? Math.round(riv.intensity) : 55, bal: riv ? { w: riv.w || 0, d: riv.d || 0, l: riv.l || 0 } : null, derby: !!derby };
+    } catch (e) { }
+    return null;
+  }
+  // (10) IN-VORM indicator
+  function formScore(p) {
+    if (!p) return 50;
+    let base = 50;
+    if (Array.isArray(p.formHist) && p.formHist.length) { let a = p.formHist.slice(-5); let m = a.reduce((s, x) => s + x, 0) / a.length; if (m <= 10) m *= 10; base = m; }
+    base += Math.min(22, (p.sGoals || 0) * 3) + Math.min(10, (p.sAssists || 0) * 2);
+    return Math.max(0, Math.min(100, Math.round(base)));
+  }
+  function formBadge(p) { const f = formScore(p); if (f >= 72) return `<span class="form-hot" title="In vorm (${f})">🔥</span>`; if (f <= 38) return `<span class="form-cold" title="Uit vorm (${f})">❄️</span>`; return ""; }
+  // (4) PRESTATIE-BADGES met unlock-popup
+  let _knownBadges = null;
+  function syncBadges(silent) {
+    let list; try { list = GAME.achievementList ? GAME.achievementList() : []; } catch (e) { return; }
+    const doneNow = list.filter(a => a.done).map(a => a.id);
+    if (_knownBadges === null) { _knownBadges = new Set(doneNow); return; } // baseline: niet toasten
+    doneNow.forEach(id => { if (!_knownBadges.has(id)) { _knownBadges.add(id); if (!silent) { const a = list.find(x => x.id === id); badgeToast(a ? a.name : "Prestatie"); } } });
+  }
+  function badgeToast(name) {
+    const d = document.createElement("div"); d.className = "badge-pop";
+    d.innerHTML = `<div class="bp-medal">${trophySVG("#f0c040")}</div><div class="bp-txt"><div class="bp-k">Prestatie ontgrendeld</div><div class="bp-n">${name}</div></div>`;
+    document.body.appendChild(d); try { global.AUDIO && global.AUDIO.goal && global.AUDIO.goal(); } catch (e) { }
+    setTimeout(() => d.classList.add("show"), 30); setTimeout(() => d.classList.remove("show"), 3400); setTimeout(() => d.remove(), 3900);
+  }
+  function badgeGrid() {
+    let list; try { list = GAME.achievementList ? GAME.achievementList() : []; } catch (e) { list = []; }
+    if (!list.length) return "";
+    const done = list.filter(a => a.done).length;
+    return `<div class="panel"><h3>🎖️ Prestaties <span class="muted" style="font-weight:400;font-size:12px">${done}/${list.length}</span></h3>
+      <div class="badge-grid">${list.map(a => `<div class="badge-cell ${a.done ? "on" : "off"}"><div class="bc-ico">${a.done ? trophySVG("#f0c040") : "🔒"}</div><div class="bc-nm">${a.name}</div></div>`).join("")}</div></div>`;
+  }
+  // (6) TROFEEKAST + tijdlijn
+  function trophyCabinet() {
+    const G = GAME.getState(); const mgr = G.manager; const hon = (mgr && mgr.honours) || [];
+    const groups = [
+      { key: "Landstitel", lbl: "Landstitels", col: "#f0c040" },
+      { key: "Europa Cup", lbl: "Europa Cup", col: "#7cc5ff" },
+      { key: "Conference", lbl: "Conference", col: "#8ee6b0" },
+      { key: "Beker", lbl: "Bekers", col: "#e0a3ff" }
+    ];
+    const cups = groups.map(g => {
+      const items = hon.filter(h => h.indexOf(g.key) >= 0 || (g.key === "Beker" && /beker|cup/i.test(h) && h.indexOf("Europa") < 0 && h.indexOf("Conference") < 0));
+      if (!items.length) return "";
+      return `<div class="tc-cup"><div class="tc-cup-ico">${trophySVG(g.col)}</div><div class="tc-cup-n">${items.length}× ${g.lbl}</div><div class="tc-cup-y muted">${items.map(h => (h.match(/S\d+/) || [""])[0]).filter(Boolean).join(" · ")}</div></div>`;
+    }).filter(Boolean).join("");
+    const hist = (G.history || []).slice(-12);
+    const timeline = hist.length ? `<div class="tc-timeline">${hist.map(s => {
+      const won = s.champion === G.clubId, cup = s.knvbWinner === G.clubId, eu = s.euroWinner === G.clubId || s.confWinner === G.clubId;
+      const cls = won ? "gold" : (cup || eu) ? "silver" : "";
+      return `<div class="tc-node ${cls}" title="Seizoen ${s.season}: ${s.myFinish || "?"}e${won ? " · Kampioen" : ""}"><span class="tc-yr">S${s.season}</span><span class="tc-dot"></span><span class="tc-fin">${won ? "🏆" : (s.myFinish ? s.myFinish + "e" : "—")}</span></div>`;
+    }).join("")}</div>` : "";
+    return `<div class="panel"><h3>🏆 Trofeekast</h3>${cups ? `<div class="tc-cups">${cups}</div>` : '<p class="muted">Nog leeg — vul \'m met glorie.</p>'}
+      ${timeline ? `<div class="muted" style="margin:12px 0 4px;font-size:12px">Seizoenen</div>${timeline}` : ""}</div>`;
+  }
+  // (2) OCHTENDKRANT / persplaat
+  let _lastPaper = null;
+  function openNewspaper() {
+    const p = _lastPaper; if (!p) { toast("Nog geen krant beschikbaar."); return; }
+    modal(`<div class="news-front"><span class="close-x" onclick="UI.closeModal()">×</span>
+      <div class="nf-masthead"><span class="nf-title">DE VOETBALKRANT</span><span class="nf-date">${p.date} · €2,20</span></div>
+      <div class="nf-head">${p.headline}</div>
+      <div class="nf-grid">
+        <div class="nf-photo">${p.motmAvatar || ""}<div class="nf-cap">${p.caption}</div></div>
+        <div class="nf-cols"><div class="nf-standfirst">${p.standfirst}</div><p>${p.body}</p>${p.pull ? `<div class="nf-pull">“${p.pull}”</div>` : ""}<p class="muted" style="font-size:11px">— ${p.byline}</p></div>
+      </div>
+      <div class="nf-strip">${p.strip.map(s => `<span>${s}</span>`).join("")}</div></div>`, true);
+  }
+  function buildPaper(ur, out, motm) {
+    const G = GAME.getState(); const uHome = ur.homeId === G.clubId; const mine = uHome ? ur.hg : ur.ag, theirs = uHome ? ur.ag : ur.hg;
+    const oppId = uHome ? ur.awayId : ur.homeId; const club = G.clubs[G.clubId].name, opp = G.clubs[oppId].name;
+    const won = mine > theirs, lost = mine < theirs, margin = Math.abs(mine - theirs);
+    const scorers = (ur.events || []).filter(e => e.type === "goal" && e.player && G.players[e.player] && G.players[e.player].club === G.clubId).map(e => lastName(G.players[e.player].name));
+    let headline;
+    if (won && margin >= 3) headline = `${club.toUpperCase()} WALST OVER ${opp.toUpperCase()} HEEN`;
+    else if (won) headline = `${club} klopt ${opp} en pakt de buit`;
+    else if (lost && margin >= 3) headline = `Blamage voor ${club} tegen ${opp}`;
+    else if (lost) headline = `${opp} te sterk voor ${club}`;
+    else headline = `${club} en ${opp} houden elkaar in evenwicht`;
+    const verdictWord = won ? "zege" : lost ? "nederlaag" : "gelijkspel";
+    const standfirst = `${club} speelde ${mine}-${theirs} tegen ${opp}. ${won ? "Een dijk van een resultaat." : lost ? "Een avond om snel te vergeten." : "Een puntendeling die niemand echt blij maakt."}`;
+    const body = `${scorers.length ? "Doelpunten van " + scorers.join(", ") + " bepaalden het beeld. " : ""}${motm ? lastName(motm.name) + " was de uitblinker en oogstte lof van de tribunes. " : ""}De trainersstaf sprak na afloop van een ${verdictWord} die ${won ? "vertrouwen geeft richting de komende weken" : lost ? "om een snel antwoord vraagt" : "meer in het vat had"}.`;
+    const pulls = [`We wisten dat het zwaar zou worden`, `Dit is waar we het voor doen`, `We moeten dit vasthouden`, `De fans verdienen beter`];
+    return {
+      headline, standfirst, body, pull: pulls[Math.floor(Math.random() * pulls.length)],
+      byline: "onze verslaggever", caption: motm ? `${motm.name} — man van de wedstrijd` : `${club} in actie`,
+      motmAvatar: motm ? playerAvatar(motm, 78) : "",
+      date: "Vandaag",
+      strip: [`${club} ${mine}-${theirs} ${opp}`].concat((out && out.leagueResults && G.clubs[G.clubId].div && (out.leagueResults[G.clubs[G.clubId].div] || []).filter(r => r.home !== G.clubId && r.away !== G.clubId).slice(0, 4).map(r => `${G.clubs[r.home].short} ${r.hg}-${r.ag} ${G.clubs[r.away].short}`)) || [])
+    };
+  }
+  // (3) AWARDS-GALA einde seizoen
+  function awardsGala(cb) {
+    const G = GAME.getState(); const sq = G.squads[G.clubId];
+    if (!sq) { if (cb) cb(); return; }
+    const players = sq.list.map(id => sq.players[id]).filter(Boolean);
+    const scoreP = p => (p.sGoals || 0) * 3 + (p.sAssists || 0) * 2 + p.ovr * 0.15;
+    const pos = players.slice().sort((a, b) => scoreP(b) - scoreP(a))[0];
+    const topsc = players.slice().sort((a, b) => (b.sGoals || 0) - (a.sGoals || 0))[0];
+    const talent = players.filter(p => p.age <= 21).sort((a, b) => (b.ovr + (b.pot || 0)) - (a.ovr + (a.pot || 0)))[0];
+    const keeper = players.filter(p => p.pos === "GK").sort((a, b) => b.ovr - a.ovr)[0];
+    const bestXI = players.slice().sort((a, b) => b.ovr - a.ovr).slice(0, 11);
+    const last = (G.history || [])[G.history.length - 1];
+    const card = (kick, p, extra) => p ? `<div class="award-card">${playerAvatar(p, 46)}<div class="aw-txt"><div class="aw-k">${kick}</div><div class="aw-n">${p.name}</div><div class="muted" style="font-size:11.5px">${extra}</div></div></div>` : "";
+    modal(`<div class="gala"><div class="gala-glow"></div>
+      <div class="gala-head"><div class="gala-kicker">EINDE-SEIZOEN GALA</div><h2>De prijzen van seizoen ${last ? last.season : ""}</h2></div>
+      <div class="award-list">
+        ${card("⭐ Speler van het seizoen", pos, pos ? `${pos.sGoals || 0} goals · ${pos.sAssists || 0} assists · OVR ${pos.ovr}` : "")}
+        ${card("👑 Topscorer", topsc, topsc ? `${topsc.sGoals || 0} doelpunten` : "")}
+        ${card("🌱 Jong talent", talent, talent ? `${talent.age} jaar · potentie ${talent.pot || talent.ovr}` : "")}
+        ${card("🧤 Beste keeper", keeper, keeper ? `OVR ${keeper.ovr}` : "")}
+      </div>
+      <div class="gala-xi"><div class="muted" style="font-size:12px;margin-bottom:6px">Elftal van het jaar</div><div class="gala-xi-row">${bestXI.map(p => `<span class="pill" title="${p.name} (${p.ovr})">${lastName(p.name)}</span>`).join(" ")}</div></div>
+      <button class="btn primary" style="margin-top:14px;width:100%" onclick="UI.closeModal();UI.afterRecap()">Verder ▶</button></div>`, true);
   }
 
   // ---- rust / team-talk (#15,16) ----
@@ -8502,8 +8773,10 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ${motm ? `<div class="ft-motm">${playerAvatar(motm, 40)}<div class="ft-motm-txt"><div class="ft-motm-lbl">★ Man van de wedstrijd</div><div class="ft-motm-nm">${motm.name} <span class="muted">${motm.ovr}</span></div>${motmLine ? `<div class="muted" style="font-size:11.5px">${motmLine}</div>` : ""}</div></div>` : ""}
       ${st ? `<div class="ft-stats">${ftStat("Balbezit", poss, 100 - poss, "%")}${ftStat("Schoten", shots, oshots)}${ftStat("xG", xg.toFixed(1), oxg.toFixed(1))}</div>` : ""}
       ${others}
-      <div class="ft-actions">${seasonDone ? `<button class="btn primary" onclick="UI.nav('competitions')">Seizoen afronden ▶</button>` : `<button class="btn primary" onclick="UI.nav('match')">Volgende wedstrijd ▶</button>`}<button class="btn sm" onclick="UI.nav('competitions')">Stand</button></div>`;
+      <div class="ft-actions">${seasonDone ? `<button class="btn primary" onclick="UI.nav('competitions')">Seizoen afronden ▶</button>` : `<button class="btn primary" onclick="UI.nav('match')">Volgende wedstrijd ▶</button>`}<button class="btn sm" onclick="UI.openNewspaper()">📰 Ochtendkrant</button><button class="btn sm" onclick="UI.nav('competitions')">Stand</button></div>`;
+    try { _lastPaper = buildPaper(ur, out, motm); } catch (e) { _lastPaper = null; } // (2) krant klaarzetten
     maybeTrophyCele();   // beker-/Europa-finale gewonnen? -> viering bovenop
+    syncBadges();        // (4) nieuwe prestaties -> unlock-popup
   }
   function doFriendly() { const r = GAME.preSeasonFriendly(); toast(r.msg); GAME.saveGame(); renderScreen(); }
   function simIdle() {
@@ -8626,13 +8899,17 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <button class="btn danger sm" style="margin-top:10px" onclick="UI.confirmRetire()">Stoppen</button>`, true);
       return;
     }
-    // niet ontslagen -> eerst viering + recap; aanbiedingen komen erná (via afterRecap)
+    // niet ontslagen -> eerst viering + recap; awards-gala + aanbiedingen komen erná (via afterRecap)
     seasonOffers = (jm.offers && jm.offers.length) ? jm.offers.slice() : null;
+    _awardsPending = true;
     if (summary.champion === G.clubId) trophyCelebration({ kicker: "LANDSKAMPIOEN", title: (summary.rec && summary.rec.leagueName) || "Kampioen", name: G.clubs[G.clubId].name, sub: "Seizoen " + summary.season, theme: "#f0c040" });
     seasonRecapModal(summary);
   }
+  let _awardsPending = false;
   function afterRecap() {
     const G = GAME.getState();
+    try { syncBadges(); } catch (e) { }         // (4) einde-seizoen prestaties
+    if (_awardsPending) { _awardsPending = false; awardsGala(afterRecap); return; } // (3) prijzengala
     if (seasonOffers && seasonOffers.length) {
       const offers = seasonOffers; seasonOffers = null;
       modal(`<h3>📞 Andere clubs willen jou</h3><p style="margin-bottom:10px">Na dit seizoen kloppen er clubs aan:</p>
@@ -9280,7 +9557,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div class="panel"><h3>🏆 Mijn prijzenkast</h3>${mgr.honours.length ? ('<ul style="margin-left:18px;line-height:1.7">' + mgr.honours.slice().reverse().map(h => `<li>${h}</li>`).join("") + "</ul>") : '<p class="muted">Nog geen prijzen — ga ze winnen!</p>'}
           <hr><button class="btn sm" onclick="UI.negotiateOwnContract()">Eigen contract bespreken</button> <button class="btn danger sm" onclick="UI.confirmRetire()">Met pensioen</button>
         </div>
-      </div>`;
+      </div>
+      ${trophyCabinet()}
+      ${badgeGrid()}`;
   }
   function scrNews(m) {
     const G = GAME.getState(); const news = G.news || [];
@@ -9355,7 +9634,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     promoteYouth, signYouth, fireYouthScout, openHireYouthScout, pickYouthScout,
     setTactic, setTraining, setFlank, toggleOffside, setRole, setSlotRole, savePlanB, savePreset, applyPreset, switchPlan,
     startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance,
-    setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent,
+    setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper,
     negotiateOwnContract, confirmRetire, openPress, pickPress, takeJob,
     setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch,
     doScout, setRange, removeFocus, assignFocusScout, openNewFocus, confirmNewFocus, openHireScout, pickScoutCand, fireScout, upgradeAcademy, setScoutFocus, openStaffHire, pickStaff, setIntensity, doCamp, loanOut,
