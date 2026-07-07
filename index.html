@@ -360,6 +360,15 @@ tbody tr:last-child td{border-bottom:none}
 .gala-xi-row{display:flex;flex-wrap:wrap;gap:5px}
 /* (10) in-vorm */
 .form-hot,.form-cold{font-size:14px;vertical-align:middle}
+/* tactische voor-/nabeschouwing + rijkere commentaar */
+.tac-read,.tac-verdict{margin-top:12px;padding:12px 14px;border-radius:12px;background:linear-gradient(160deg,rgba(22,229,143,.08),rgba(255,255,255,.02));border:1px solid rgba(22,229,143,.22)}
+.tac-verdict{background:linear-gradient(160deg,rgba(124,180,255,.08),rgba(255,255,255,.02));border-color:rgba(124,180,255,.22);text-align:left}
+.tr-head{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;font-weight:800;color:var(--accent,#16e58f);margin-bottom:8px}
+.tac-verdict .tr-head{color:#7cb4ff}
+.tr-line{font-size:12.5px;line-height:1.5;padding:3px 0;color:var(--txt,#e8edf6)}
+.tr-line+.tr-line{border-top:1px solid rgba(255,255,255,.05)}
+.cmt.act{color:var(--accent,#16e58f);font-weight:600}
+.cmt.flavor{opacity:.72;font-size:12px}
 .momentum{height:8px;background:var(--bad);border-radius:5px;overflow:hidden}
 .momentum > i{display:block;height:100%;width:50%;background:var(--accent);transition:width .3s}
 /* ---------- effecten ---------- */
@@ -4215,6 +4224,45 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     for (const x of weighted) { r -= x.w; if (r <= 0) return x.p; }
     return weighted[weighted.length - 1].p;
   }
+  function lastNm(n) { return (n || "").split(" ").slice(-1)[0]; }
+  // kies een speler gewogen op een attribuut + linie (zodat de juiste man de actie doet)
+  function pickByAttr(side, attrKey, lineW) {
+    const cands = side.xi.map(id => side.players[id]).filter(p => p && p.pos !== "GK");
+    if (!cands.length) return null;
+    const weighted = cands.map(p => { const line = D.POSITIONS[p.pos].line; let w = (p.attrs[attrKey] || 50); w *= (lineW[line] || 1); return { p, w }; });
+    return weightedPick(weighted);
+  }
+  // narratieve, ZICHTBARE actie (cosmetisch: telt niet mee in de opgeslagen events)
+  function pushAction(out, min, club, type, p1, p2) {
+    const n1 = p1 ? lastNm(p1.name) : "", n2 = p2 ? lastNm(p2.name) : "";
+    let text = "";
+    if (type === "longball") text = `📤 ${min}' Lange bal van ${n1} op de doorgebroken ${n2 || "spits"}`;
+    else if (type === "cross") text = `↗️ ${min}' ${n1} komt door en brengt scherp voor`;
+    else if (type === "combo") text = `🔄 ${min}' Vloeiend samenspel — ${n1} steekt door op ${n2}`;
+    else if (type === "dribble") text = `⚡ ${min}' ${n1} kapt zijn tegenstander uit`;
+    else if (type === "press") text = `🎯 ${min}' ${n1} verovert de bal hoog op het veld!`;
+    else if (type === "tackle") text = `🛡️ ${min}' Cruciale tackle van ${n1}`;
+    else if (type === "intercept") text = `🧱 ${min}' ${n1} leest het spel en onderschept`;
+    else if (type === "counter") text = `🏃 ${min}' Bliksemsnelle omschakeling!`;
+    else if (type === "corner") text = `🚩 ${min}' Hoekschop`;
+    else text = `${min}' ${n1}`;
+    out.push({ min, team: club, type, player: p1 ? p1.id : null, assist: p2 ? p2.id : null, text, cosmetic: true });
+  }
+  // opbouw van een aanval, gestuurd door de speelstijl + flank-focus + attributen
+  function buildupAction(M, out, m, side) {
+    const t = side.tactics || {}, style = t.style || "", flank = t.flankFocus || "Midden", tempo = t.tempo || "";
+    const r = D.srand();
+    if (style === "Directe bal" || (tempo === "Hoog" && r < 0.35)) {
+      const passer = pickByAttr(side, "pas", { DEF: 1.5, MID: 1.1, ATT: 0.6 }), runner = pickByAttr(side, "pac", { ATT: 2.2, MID: 1, DEF: 0.3 });
+      if (passer && runner) pushAction(out, m, side.club, "longball", passer, runner);
+    } else if (flank === "Links" || flank === "Rechts") {
+      const w = pickByAttr(side, "dri", { MID: 1.3, ATT: 1.8, DEF: 0.4 }); if (w) pushAction(out, m, side.club, "cross", w, null);
+    } else if (r < 0.4) {
+      const d = pickByAttr(side, "dri", { ATT: 1.8, MID: 1.2, DEF: 0.3 }); if (d) pushAction(out, m, side.club, "dribble", d, null);
+    } else {
+      const p1 = pickByAttr(side, "pas", { MID: 2.0, ATT: 1, DEF: 0.5 }), p2 = pickByAttr(side, "dri", { ATT: 1.6, MID: 1.2 }); if (p1 && p2) pushAction(out, m, side.club, "combo", p1, p2);
+    }
+  }
 
   // snelle sim (alleen score) voor AI-onderlinge wedstrijden
   // verwachte goals uit kwaliteit (att+mid vs def+gk), sterk gedreven door niveauverschil
@@ -4224,10 +4272,10 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     // zodat sterke clubs consistent winnen (i.p.v. een te vlakke ratio).
     const offH = rH.att * 0.66 + rH.mid * 0.34, offA = rA.att * 0.66 + rA.mid * 0.34;
     const defH = rH.def * 0.74 + rH.gk * 0.26, defA = rA.def * 0.74 + rA.gk * 0.26;
-    const SENS = 15;                       // gevoeligheid voor krachtsverschil (lager = scherper)
-    const baseH = 1.42 * homeAdv, baseA = 1.16;
-    const eH = Math.max(0.08, Math.min(6.5, baseH * Math.exp((offH - defA) / SENS)));
-    const eA = Math.max(0.08, Math.min(6.5, baseA * Math.exp((offA - defH) / SENS)));
+    const SENS = 24;                       // gevoeligheid voor krachtsverschil (hoger = minder explosief -> realistischere scores)
+    const baseH = 1.18 * homeAdv, baseA = 0.95;
+    const eH = Math.max(0.05, Math.min(3.6, baseH * Math.exp((offH - defA) / SENS)));
+    const eA = Math.max(0.05, Math.min(3.6, baseA * Math.exp((offA - defH) / SENS)));
     return { eH, eA };
   }
   function quickSim(rH, rA) {
@@ -4253,7 +4301,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     return {
       minute: 0, hg: 0, ag: 0, events: [], finished: false,
       home: homeSide, away: awaySide, weather: pickWeather(), extra: D.rndi(1, 5), momentum: 0,
-      stats: { homeShots: 0, awayShots: 0, homeChances: 0, awayChances: 0, homePoss: 50, xgH: 0, xgA: 0, onH: 0, onA: 0, offH: 0, offA: 0, blkH: 0, blkA: 0 },
+      stats: { homeShots: 0, awayShots: 0, homeChances: 0, awayChances: 0, homePoss: 50, xgH: 0, xgA: 0, onH: 0, onA: 0, offH: 0, offA: 0, blkH: 0, blkA: 0, corH: 0, corA: 0, duelH: 0, duelA: 0 },
       minutesPlayed: {}, yc: {}, forcedSub: null
     };
   }
@@ -4263,7 +4311,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function resolveChance(M, out, m, home, conv) {
     if (home) M.stats.homeChances++; else M.stats.awayChances++;
     M.momentum = Math.max(-100, Math.min(100, (M.momentum || 0) + (home ? 9 : -9)));
-    const side = home ? M.home : M.away;
+    const side = home ? M.home : M.away, opp = home ? M.away : M.home;
+    if (srandLocal() < 0.72) buildupAction(M, out, m, side); // ZICHTBARE opbouw, gestuurd door jouw tactiek
     const xg = Math.max(0.04, Math.min(0.75, conv * D.rnd(0.6, 2.2)));
     if (home) M.stats.xgH += xg; else M.stats.xgA += xg;
     if (srandLocal() < conv) {
@@ -4278,8 +4327,16 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       if (home) M.stats.homeShots++; else M.stats.awayShots++;
       const r = srandLocal();
       if (r < 0.4) { if (home) M.stats.onH++; else M.stats.onA++; if (srandLocal() < 0.5) pushEvent(out, m, side.club, "save", pickScorer(side), null, true); }
-      else if (r < 0.7) { if (home) M.stats.offH++; else M.stats.offA++; }
-      else { if (home) M.stats.blkH++; else M.stats.blkA++; }
+      else if (r < 0.7) {
+        if (home) M.stats.offH++; else M.stats.offA++;
+        if (srandLocal() < 0.4) { pushAction(out, m, side.club, "corner", null, null); if (home) M.stats.corH++; else M.stats.corA++; } // hoekschop
+      }
+      else {
+        if (home) M.stats.blkH++; else M.stats.blkA++;
+        // een sterke verdediger van de TEGENpartij grijpt zichtbaar in
+        const dfn = pickByAttr(opp, "def", { DEF: 2.2, MID: 1, ATT: 0.2 });
+        if (dfn) { const t2 = srandLocal() < 0.5 ? "tackle" : "intercept"; pushAction(out, m, opp.club, t2, dfn, null); if (opp === M.home) M.stats.duelH++; else M.stats.duelA++; }
+      }
     }
   }
 
@@ -4303,6 +4360,13 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
 
       if (srandLocal() < chH / 90) resolveChance(M, out, m, true, convH);
       if (srandLocal() < chA / 90) resolveChance(M, out, m, false, convA);
+      // ZICHTBARE pressing: hoge pressie verovert de bal hoog -> soms een counter-kans
+      if (srandLocal() < 0.05) {
+        const hp = M.home.tactics && M.home.tactics.pressing === "Hoge pressie";
+        const ap = M.away.tactics && M.away.tactics.pressing === "Hoge pressie";
+        if (hp && (!ap || srandLocal() < 0.5)) { const p = pickByAttr(M.home, "def", { MID: 1.6, ATT: 1.3, DEF: 1 }); if (p) { pushAction(out, m, M.home.club, "press", p, null); M.stats.duelH++; if (srandLocal() < 0.32) { pushAction(out, m, M.home.club, "counter", null, null); resolveChance(M, out, m, true, convH); } } }
+        else if (ap) { const p = pickByAttr(M.away, "def", { MID: 1.6, ATT: 1.3, DEF: 1 }); if (p) { pushAction(out, m, M.away.club, "press", p, null); M.stats.duelA++; if (srandLocal() < 0.32) { pushAction(out, m, M.away.club, "counter", null, null); resolveChance(M, out, m, false, convA); } } }
+      }
       // kaarten
       if (srandLocal() < 0.010) {
         const homeCard = srandLocal() < 0.5;
@@ -4329,7 +4393,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       }
     }
     M.minute = toMinute;
-    M.events.push.apply(M.events, out);
+    M.events.push.apply(M.events, out.filter(e => !e.cosmetic)); // cosmetische acties niet opslaan
     return out;
   }
   function srandLocal() { return D.srand(); }
@@ -8165,6 +8229,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div class="match-sub">${nm.label} <span class="venue-pill">${userHome ? "THUIS" : "UIT"}</span>${compTag}${global.COMP.isDerby && global.COMP.isDerby(homeId, awayId) ? ' <span class="pill red">🔥 DERBY</span>' : ""}</div>
         <div id="matchctrl">
           ${compare}
+          <div class="tac-read"><div class="tr-head">🧠 Tactische voorbeschouwing</div>${tacticalRead(G, opp).map(x => `<div class="tr-line">${x}</div>`).join("")}</div>
           ${tired ? `<div class="center" style="margin-top:10px"><span class="pill red">⚠ ${tired} basisspeler(s) onder 65% fit</span></div>` : ""}
           <div class="match-actions">
             <button class="btn sm" onclick="UI.nav('squad')">Opstelling</button><button class="btn sm" onclick="UI.nav('tactics')">Tactiek</button>
@@ -8276,7 +8341,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="match-stats-bar"><span>Bezit</span><div class="bar"><i style="width:${st.homePoss}%"></i></div><span>${st.homePoss}% / ${100 - st.homePoss}%</span></div>
       <div class="match-stats-bar"><span>xG ${st.xgH.toFixed(1)}</span><div class="bar"><i style="width:${pctBar(st.xgH, st.xgA)}%"></i></div><span>${st.xgA.toFixed(1)}</span></div>
       <div class="match-stats-bar"><span>Schoten ${st.homeShots}</span><div class="bar"><i style="width:${pctBar(st.homeShots, st.awayShots)}%"></i></div><span>${st.awayShots}</span></div>
-      <div class="flexbar muted" style="font-size:11px;margin-top:2px"><span>op doel ${st.onH} · naast ${st.offH} · blok ${st.blkH}</span><span class="spacer"></span><span>${st.onA} · ${st.offA} · ${st.blkA}</span></div>`;
+      <div class="flexbar muted" style="font-size:11px;margin-top:2px"><span>op doel ${st.onH} · naast ${st.offH} · blok ${st.blkH}</span><span class="spacer"></span><span>${st.onA} · ${st.offA} · ${st.blkA}</span></div>
+      <div class="flexbar muted" style="font-size:11px;margin-top:1px"><span>hoekschoppen ${st.corH != null ? st.corH : 0} · duels gewonnen ${st.duelH != null ? st.duelH : 0}</span><span class="spacer"></span><span>${st.corA != null ? st.corA : 0} · ${st.duelA != null ? st.duelA : 0}</span></div>`;
   }
   function weatherIcon(w) { return { Zonnig: "☀️", Bewolkt: "☁️", Regen: "🌧️", Wind: "💨", Sneeuw: "❄️" }[w] || "🌤️"; }
   function updateMeta() { const el = $("#mmeta"); if (!el || !live) return; const M = live.M, G = GAME.getState(); el.innerHTML = `<span>${weatherIcon(M.weather)} ${M.weather}</span><span class="spacer"></span><span class="muted">Scheidsrechter-extra: ${M.extra}'</span>`; }
@@ -8370,7 +8436,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function stepPitch(evs) {
     if (!live || !live.ball) return;
     const goal = evs.find(e => e.type === "goal");
-    const att = evs.find(e => ["goal", "save", "var", "varok", "chance"].includes(e.type));
+    const att = evs.find(e => ["goal", "save", "var", "varok", "chance", "longball", "cross", "combo", "dribble", "counter"].includes(e.type));
     // 1) spelers reageren op wáár de bal nu ligt
     placeTeam(true, live.ball.x, live.ball.y); placeTeam(false, live.ball.x, live.ball.y);
     // 2) de bal wordt naar een échte speler gespeeld (of het doel in bij een goal)
@@ -8555,6 +8621,41 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <button class="btn primary" style="margin-top:14px;width:100%" onclick="UI.closeModal();UI.afterRecap()">Verder ▶</button></div>`, true);
   }
 
+  // TACTISCHE VOOR- EN NABESCHOUWING (tactiek heeft zichtbaar effect)
+  function tacticalRead(G, oppId) {
+    const sq = G.squads[G.clubId]; const t = sq.tactics || {}; const opp = G.squads[oppId];
+    const myR = teamDisplay(sq), opR = opp ? teamDisplay(opp) : { att: 60, mid: 60, def: 60 };
+    const b = [];
+    if (t.pressing === "Hoge pressie") b.push("🎯 Hoge pressie: je jaagt vroeg en verovert de bal hoger op het veld — maar je laat ruimte achter je verdediging.");
+    else if (t.pressing === "Laag blok") b.push("🛡️ Laag blok: solide achterin, maar je zult het van de omschakeling moeten hebben.");
+    if (/aanvallend/i.test(t.mentality || "")) b.push("⚔️ Aanvallende instelling: meer man naar voren — meer kansen, maar ook meer risico op de counter.");
+    else if (/defensief/i.test(t.mentality || "")) b.push("🔒 Defensieve instelling: je geeft weinig weg, maar creëert ook minder zelf.");
+    if (t.flankFocus && t.flankFocus !== "Midden") b.push(`↗️ Aanval via ${(t.flankFocus + "").toLowerCase()}: voorzetten worden je wapen — zet er een sterke kopper voorin.`);
+    if (t.style === "Directe bal") b.push("📤 Directe bal: snel naar voren, minder opbouw maar meer diepgang met een snelle spits.");
+    if (myR.att > opR.def + 6) b.push("💪 Jouw aanval overtreft hun verdediging — durf door te drukken.");
+    else if (opR.att > myR.def + 6) b.push("⚠️ Hun aanval is sterker dan jouw defensie — compact blijven kan slim zijn.");
+    if (!b.length) b.push("Gebalanceerde opzet. Verander je instructies (pressie, mentaliteit, flank) om een specifiek voordeel te forceren.");
+    return b.slice(0, 4);
+  }
+  function tacticalVerdict() {
+    if (!live || !live.M) return [];
+    const M = live.M, uHome = M.home === live.userSide, st = M.stats;
+    const poss = uHome ? st.homePoss : 100 - st.homePoss;
+    const xg = uHome ? st.xgH : st.xgA, oxg = uHome ? st.xgA : st.xgH;
+    const goals = uHome ? M.hg : M.ag; const t = live.userSide.tactics || {};
+    const duels = uHome ? (st.duelH || 0) : (st.duelA || 0);
+    const b = [];
+    if (poss >= 58) b.push(`Je had het meeste balbezit (${poss}%) en dicteerde het spel.`);
+    else if (poss <= 42) b.push(`Je liet de bal aan de tegenstander (${poss}%) en loerde op de omschakeling.`);
+    if (xg >= 2 && goals < xg - 1.2) b.push(`Je creëerde genoeg (xG ${xg.toFixed(1)}) maar was slordig in de afronding.`);
+    else if (xg >= 1.8) b.push(`Je aanvalsplan leverde ${xg.toFixed(1)} xG op — de kansen waren er volop.`);
+    else if (xg < 1) b.push(`Offensief kwam je nauwelijks in stelling (xG ${xg.toFixed(1)}) — meer risico nodig.`);
+    if (oxg >= 2) b.push(`Achterin gaf je te veel weg (tegenstander xG ${oxg.toFixed(1)}).`);
+    else if (oxg < 0.8) b.push(`Defensief stond het als een huis (tegenstander xG ${oxg.toFixed(1)}).`);
+    if (t.pressing === "Hoge pressie" && duels > 0) b.push(`Je pressing leverde ${duels} balveroveringen hoog op het veld op.`);
+    return b.slice(0, 3);
+  }
+
   // ---- rust / team-talk (#15,16) ----
   function showHalftime() {
     const M = live.M, us = live.userSide, uHome = M.home === us, mg = uHome ? M.hg : M.ag, og = uHome ? M.ag : M.hg;
@@ -8623,7 +8724,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
 
   function addComment(comm, ev) {
     if (!comm) return;
-    const cls = (ev.type === "goal" || ev.type === "varok") ? "goal" : (ev.type === "injury" || ev.type === "red" || ev.type === "var") ? "injury" : "";
+    const cls = (ev.type === "goal" || ev.type === "varok") ? "goal" : (ev.type === "injury" || ev.type === "red" || ev.type === "var") ? "injury" : (ev.type === "press" || ev.type === "counter") ? "act" : (["longball", "cross", "combo", "dribble", "tackle", "intercept", "corner"].includes(ev.type)) ? "flavor" : "";
     const d = document.createElement("div"); d.className = "cmt " + cls; d.textContent = ev.text; comm.appendChild(d); comm.scrollTop = comm.scrollHeight;
   }
 
@@ -8772,6 +8873,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ${myScorers.length ? `<div class="ft-line">⚽ <b>Doelpunten:</b> ${myScorers.join(" · ")}</div>` : ""}
       ${motm ? `<div class="ft-motm">${playerAvatar(motm, 40)}<div class="ft-motm-txt"><div class="ft-motm-lbl">★ Man van de wedstrijd</div><div class="ft-motm-nm">${motm.name} <span class="muted">${motm.ovr}</span></div>${motmLine ? `<div class="muted" style="font-size:11.5px">${motmLine}</div>` : ""}</div></div>` : ""}
       ${st ? `<div class="ft-stats">${ftStat("Balbezit", poss, 100 - poss, "%")}${ftStat("Schoten", shots, oshots)}${ftStat("xG", xg.toFixed(1), oxg.toFixed(1))}</div>` : ""}
+      ${(function () { const v = tacticalVerdict(); return v && v.length ? `<div class="tac-verdict"><div class="tr-head">🧠 Waarom deze uitslag</div>${v.map(x => `<div class="tr-line">${x}</div>`).join("")}</div>` : ""; })()}
       ${others}
       <div class="ft-actions">${seasonDone ? `<button class="btn primary" onclick="UI.nav('competitions')">Seizoen afronden ▶</button>` : `<button class="btn primary" onclick="UI.nav('match')">Volgende wedstrijd ▶</button>`}<button class="btn sm" onclick="UI.openNewspaper()">📰 Ochtendkrant</button><button class="btn sm" onclick="UI.nav('competitions')">Stand</button></div>`;
     try { _lastPaper = buildPaper(ur, out, motm); } catch (e) { _lastPaper = null; } // (2) krant klaarzetten
