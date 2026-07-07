@@ -369,6 +369,26 @@ tbody tr:last-child td{border-bottom:none}
 .tr-line+.tr-line{border-top:1px solid rgba(255,255,255,.05)}
 .cmt.act{color:var(--accent,#16e58f);font-weight:600}
 .cmt.flavor{opacity:.72;font-size:12px}
+/* tegenstander-rapport */
+.opp-report{margin-top:12px;padding:12px 14px;border-radius:12px;background:linear-gradient(160deg,rgba(224,163,255,.08),rgba(255,255,255,.02));border:1px solid rgba(224,163,255,.22)}
+.or-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+@media(max-width:520px){.or-grid{grid-template-columns:1fr}}
+.or-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.or-player{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12.5px;cursor:pointer}
+.or-player svg{flex:0 0 auto}
+.or-advice{margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:6px}
+/* clubrecords */
+.rec-row{display:flex;align-items:center;padding:4px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.05)}
+.rec-row span:first-child{flex:1}
+.rec-row b{font-variant-numeric:tabular-nums}
+/* onboarding */
+.onb{text-align:center;padding:4px}
+.onb-ico{font-size:44px;line-height:1;margin-bottom:4px}
+.onb-body{font-size:13.5px;line-height:1.6;color:var(--txt,#e8edf6);margin:6px 0 14px}
+.onb-dots{display:flex;justify-content:center;gap:7px;margin-bottom:14px}
+.onb-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18)}
+.onb-dots span.on{background:var(--accent,#16e58f);box-shadow:0 0 8px rgba(22,229,143,.6)}
+.onb-actions{display:flex;align-items:center;gap:8px}
 /* spelerkaart-verdieping */
 .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 @media(max-width:520px){.prof-grid{grid-template-columns:1fr}}
@@ -6255,6 +6275,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     // speeltijd-onvrede & transferverzoeken (#46-47, status-bewust)
     if (type === "league") processPlaytimeComplaints();
     if (type === "league") {
+      internationalBreak();                                 // interlandperiodes: oproepen + WK/EK
       tickStadiumBuild();                                   // stadionverbouwing vordert per speelweek
       if (global.SCOUT) {                                   // scouting: focuses vorderen wekelijks, maandbudget per ~4 weken
         global.SCOUT.tickFocuses(G);
@@ -6308,6 +6329,41 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     if (margin >= 0) { G.records.unbeatenCur++; if (margin > 0 && (!G.records.bestWin || margin > G.records.bestWin.margin)) G.records.bestWin = { margin, text: `${mg}-${og} vs ${G.clubs[uHome ? mm.away : mm.home].name} (S${G.season})` }; }
     else G.records.unbeatenCur = 0;
     if (G.records.unbeatenCur > G.records.longestUnbeaten) G.records.longestUnbeaten = G.records.unbeatenCur;
+  }
+  // INTERLANDS & WK/EK — spelers opgeroepen voor hun land tijdens interlandperiodes
+  function internationalBreak() {
+    const windows = [5, 11, 17, 25];
+    if (windows.indexOf(G.mdPtr) < 0) return;
+    if (!G.intlDone) G.intlDone = {};
+    const key = G.season + "-" + G.mdPtr; if (G.intlDone[key]) return; G.intlDone[key] = true;
+    const sq = G.squads[G.clubId]; if (!sq) return;
+    const called = [];
+    sq.list.forEach(id => {
+      const p = sq.players[id]; if (!p || p.injuredWeeks > 0) return;
+      const chance = p.ovr >= 84 ? 0.95 : p.ovr >= 79 ? 0.7 : p.ovr >= 74 ? 0.35 : p.ovr >= 70 ? 0.12 : 0;
+      if (D.srand() < chance) called.push(p);
+    });
+    if (!called.length) return;
+    const results = called.map(p => {
+      p.caps = (p.caps || 0) + D.rndi(1, 2);
+      p.intlGoals = p.intlGoals || 0;
+      p.fitness = Math.max(38, p.fitness - D.rndi(8, 18));            // vermoeidheid
+      p.morale = Math.min(100, (p.morale || 60) + D.rndi(1, 4));      // trots
+      let inj = false; if (D.srand() < 0.06) { p.injuredWeeks = (p.injuredWeeks || 0) + D.rndi(1, 3); inj = true; }
+      let scored = 0; if (D.POSITIONS[p.pos] && D.POSITIONS[p.pos].line === "ATT" && D.srand() < 0.4) { scored = D.rndi(1, 2); p.intlGoals += scored; }
+      return { name: p.name, nat: p.nat, inj, scored };
+    });
+    let body = `Tijdens de interlandperiode zijn ${called.length} van je spelers opgeroepen voor hun land:\n` +
+      results.map(r => `• ${r.name} (${r.nat})${r.scored ? ` — ${r.scored}x gescoord!` : ""}${r.inj ? " — geblesseerd terug" : ""}`).join("\n") +
+      `\n\nZe keren wat vermoeid terug — let op hun conditie voor de volgende wedstrijd.`;
+    addInbox("Interlandperiode", body, { from: "Technische staf" });
+    // WK/EK: elke 2 seizoenen een groot toernooi in de zomer (eerste window)
+    if (G.season % 2 === 0 && G.mdPtr === windows[0]) {
+      const tour = (G.season % 4 === 0) ? "het WK" : "het EK";
+      const star = called.slice().sort((a, b) => b.ovr - a.ovr)[0];
+      star.morale = Math.min(100, (star.morale || 60) + 5); star.caps = (star.caps || 0) + 3;
+      addInbox(tour + " gespeeld", `${tour} is afgelopen! ${star.name} maakte indruk namens ${star.nat} en werd in het toernooi-elftal gekozen. Hij keert met extra vertrouwen terug.`, { from: "Technische staf" });
+    }
   }
   function updateHonours(s) {                                   // erelijst (#124)
     if (!G.records) return; const id = G.clubId;
@@ -7811,7 +7867,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function createClub() {
     const custom = { name: $("#cc-name").value || "FC Toekomst", short: ($("#cc-short").value || "FCT").toUpperCase(), city: $("#cc-city").value || "Onbekend", col1: $("#cc-col1").value, col2: $("#cc-col2").value };
-    GAME.newGame(null, $("#cc-mgr").value || "Manager", custom, "nobody"); GAME.saveGame(); screen = "dashboard"; renderApp();
+    GAME.newGame(null, $("#cc-mgr").value || "Manager", custom, "nobody"); GAME.saveGame(); screen = "dashboard"; renderApp(); maybeOnboard();
   }
   function askManagerName(clubId) {
     const bgOpts = Object.keys(global.MGR.BACKGROUNDS).map(k => `<option value="${k}" ${k === "coach" ? "selected" : ""}>${global.MGR.BACKGROUNDS[k].label} (reputatie ${global.MGR.BACKGROUNDS[k].rep})</option>`).join("");
@@ -7821,7 +7877,24 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="field-row"><label>Moeilijkheidsgraad</label><select id="mgr-diff" class="live-select" style="width:100%"><option>Makkelijk</option><option selected>Normaal</option><option>Moeilijk</option></select></div>
       <button class="btn primary" onclick="UI.startWithClub('${clubId}')">Begin carrière</button>`);
   }
-  function startWithClub(clubId) { const mgr = ($("#mgr-name") && $("#mgr-name").value) || "Manager"; const bg = $("#mgr-bg") ? $("#mgr-bg").value : "coach"; const diff = $("#mgr-diff") ? $("#mgr-diff").value : "Normaal"; closeModal(); GAME.newGame(clubId, mgr, null, bg, diff); GAME.saveGame(); screen = "dashboard"; renderApp(); }
+  function startWithClub(clubId) { const mgr = ($("#mgr-name") && $("#mgr-name").value) || "Manager"; const bg = $("#mgr-bg") ? $("#mgr-bg").value : "coach"; const diff = $("#mgr-diff") ? $("#mgr-diff").value : "Normaal"; closeModal(); GAME.newGame(clubId, mgr, null, bg, diff); GAME.saveGame(); screen = "dashboard"; renderApp(); maybeOnboard(); }
+  // ONBOARDING — korte rondleiding voor nieuwe spelers (eenmalig)
+  const ONB_STEPS = [
+    { icon: "⚽", title: "Welkom, directeur!", body: "Jij runt de club: je stelt het elftal op, bepaalt de tactiek, doet transfers en leidt je team naar succes. In 5 korte stappen leggen we de basis uit." },
+    { icon: "👥", title: "1 · Opstelling", body: "Bij <b>Opstelling</b> zet je je beste 11 neer — tik twee spelers aan om ze te wisselen, of gebruik ‘Auto’. Met de weergave <b>Attributen</b> vergelijk je snel je hele selectie." },
+    { icon: "📋", title: "2 · Tactiek", body: "Bij <b>Tactiek</b> bepaal je je speelstijl: mentaliteit, pressing en flanken. Belangrijk: je keuzes zie je écht terug in de wedstrijd." },
+    { icon: "🎯", title: "3 · De wedstrijd", body: "Speel je duel <b>live</b> of <b>simuleer</b> het snel. Lees vooraf het <b>tegenstander-rapport</b> en de tactische voorbeschouwing, en achteraf ‘Waarom deze uitslag’." },
+    { icon: "📊", title: "4 · Transfers & Analyse", body: "Versterk je ploeg bij <b>Transfers</b> en <b>Scouting</b>, en houd alles in de gaten bij <b>Analyse</b> (de data-hub). Klaar? Veel succes, directeur!" }
+  ];
+  function maybeOnboard() { try { if (!localStorage.getItem("vd_onboarded")) onbTour(0); } catch (e) { } }
+  function onbTour(step) {
+    const s = ONB_STEPS[step]; if (!s) { onbDone(); return; }
+    const last = step === ONB_STEPS.length - 1;
+    modal(`<div class="onb"><div class="onb-ico">${s.icon}</div><h3 style="margin:6px 0">${s.title}</h3><p class="onb-body">${s.body}</p>
+      <div class="onb-dots">${ONB_STEPS.map((_, i) => `<span class="${i === step ? "on" : ""}"></span>`).join("")}</div>
+      <div class="onb-actions">${step > 0 ? `<button class="btn sm" onclick="UI.onbTour(${step - 1})">← Vorige</button>` : `<button class="btn sm" onclick="UI.onbDone()">Overslaan</button>`}<span class="spacer"></span><button class="btn primary sm" onclick="UI.${last ? "onbDone()" : "onbTour(" + (step + 1) + ")"}">${last ? "Beginnen! ⚽" : "Volgende →"}</button></div></div>`);
+  }
+  function onbDone() { try { localStorage.setItem("vd_onboarded", "1"); } catch (e) { } closeModal(); }
   function continueGame() { if (GAME.loadGame()) { screen = "dashboard"; renderApp(); } else toast("Geen save gevonden"); }
   function confirmDelete() { if (confirm("Save echt verwijderen?")) { GAME.deleteSave(); renderStart(); } }
 
@@ -8184,7 +8257,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       </div>` : "";
     modal(`<span class="close-x" onclick="UI.closeModal()">×</span>
       <h3 style="display:flex;align-items:center;gap:10px">${playerAvatar(p, 36)}<span>${p.name} ${ovrBadge(p.ovr)} ${formBadge(p)} ${p.isLegend ? "<span class='pill gold'>legende</span>" : ""}</span></h3>
-      <div class="flexbar" style="margin-bottom:6px">${posChip(p.pos)}${p.pos2 ? ` <span class="muted">/ ${p.pos2}</span>` : ""} <span class="muted">${D.POSITIONS[p.pos].label}</span><span class="spacer"></span><span class="muted">${p.nat} · ${p.age} jr · ${p.personality || ""}</span></div>
+      <div class="flexbar" style="margin-bottom:6px">${posChip(p.pos)}${p.pos2 ? ` <span class="muted">/ ${p.pos2}</span>` : ""} <span class="muted">${D.POSITIONS[p.pos].label}</span><span class="spacer"></span><span class="muted">${p.nat} · ${p.age} jr · ${p.personality || ""}${p.caps ? ` · 🌍 ${p.caps} caps${p.intlGoals ? " · " + p.intlGoals + " int.goals" : ""}` : ""}</span></div>
       <div class="center" style="margin:2px 0 6px">${radarSVG(a)}</div>
       <div class="grid2">
         <div><div class="muted" style="margin-bottom:4px">Kernattributen <span style="font-size:10px">(pijl = verwachte groei)</span></div>${core.map(b => attrRow(b[0], b[1], attrTrendArrow(p, b[2]))).join("")}
@@ -8381,6 +8454,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div id="matchctrl">
           ${compare}
           <div class="tac-read"><div class="tr-head">🧠 Tactische voorbeschouwing</div>${tacticalRead(G, opp).map(x => `<div class="tr-line">${x}</div>`).join("")}</div>
+          ${opponentReport(G, opp)}
           ${tired ? `<div class="center" style="margin-top:10px"><span class="pill red">⚠ ${tired} basisspeler(s) onder 65% fit</span></div>` : ""}
           <div class="match-actions">
             <button class="btn sm" onclick="UI.nav('squad')">Opstelling</button><button class="btn sm" onclick="UI.nav('tactics')">Tactiek</button>
@@ -8788,6 +8862,28 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     if (!b.length) b.push("Gebalanceerde opzet. Verander je instructies (pressie, mentaliteit, flank) om een specifiek voordeel te forceren.");
     return b.slice(0, 4);
   }
+  function opponentReport(G, oppId) {
+    const opp = G.squads[oppId]; if (!opp) return "";
+    const players = opp.list.map(id => opp.players[id]).filter(Boolean); if (!players.length) return "";
+    const top = players.slice().sort((a, b) => b.ovr - a.ovr).slice(0, 3);
+    const danger = players.slice().sort((a, b) => (b.sGoals * 3 + b.sAssists * 2 + b.ovr * 0.1) - (a.sGoals * 3 + a.sAssists * 2 + a.ovr * 0.1))[0];
+    const oppR = teamDisplay(opp), myR = teamDisplay(G.squads[G.clubId]);
+    const strongLine = (oppR.att >= oppR.mid && oppR.att >= oppR.def) ? "de aanval" : (oppR.mid >= oppR.def) ? "het middenveld" : "de verdediging";
+    const advice = [];
+    if (oppR.att > myR.def + 4) advice.push("Hun aanval is sterker dan jouw defensie — zak iets in en beperk de ruimte in de rug.");
+    else if (myR.att > oppR.def + 4) advice.push("Hun verdediging is kwetsbaar — druk hoog en zet ze vroeg vast.");
+    if (danger && (danger.sGoals || 0) >= 3) advice.push(`Let op ${lastName(danger.name)} — al ${danger.sGoals} goals dit seizoen.`);
+    if (oppR.mid > myR.mid + 4) advice.push("Ze zijn sterk op het middenveld; overweeg een extra man in het centrum.");
+    if (!advice.length) advice.push("Gelijkwaardige tegenstander — de details en je scherpte maken het verschil.");
+    const fmt = (G.clubs[oppId] && G.clubs[oppId].formation) || opp.formation || "";
+    return `<div class="opp-report"><div class="tr-head" style="color:#e0a3ff">🔎 Tegenstander-rapport — ${G.clubs[oppId].name}</div>
+      <div class="or-grid">
+        <div><div class="muted or-lbl">Sterkhouders</div>${top.map(p => `<div class="or-player" onclick="UI.playerCard(${p.id})">${playerAvatar(p, 22)}<b>${lastName(p.name)}</b> ${ovrMini(p.ovr)} <span class="muted">${D.POSITIONS[p.pos] ? D.POSITIONS[p.pos].label : p.pos}</span></div>`).join("")}</div>
+        <div><div class="muted or-lbl">Grootste gevaar</div>${danger ? `<div class="or-player" onclick="UI.playerCard(${danger.id})">${playerAvatar(danger, 22)}<b>${lastName(danger.name)}</b> <span class="muted">${danger.sGoals || 0}g ${danger.sAssists || 0}a</span></div>` : ""}
+          <div class="muted or-lbl" style="margin-top:8px">Sterkste linie</div><div>${strongLine}${fmt ? ` · <span class="muted">${fmt}</span>` : ""}</div></div>
+      </div>
+      <div class="or-advice">${advice.map(a => `<div class="tr-line">💡 ${a}</div>`).join("")}</div></div>`;
+  }
   function tacticalVerdict() {
     if (!live || !live.M) return [];
     const M = live.M, uHome = M.home === live.userSide, st = M.stats;
@@ -8890,8 +8986,43 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const M = live.M, type = live.type;
     const userResult = { homeId: M.home.club, awayId: M.away.club, hg: M.hg, ag: M.ag, events: M.events, minutesPlayed: M.minutesPlayed, shootoutWin };
     const out = GAME.playMatchday(userResult);
+    try { updateClubRecords(userResult); } catch (e) { }
     GAME.saveGame();
     renderPostMatch(out, type, userResult, shootoutWin);
+  }
+  // clubrecords + all-time topscorers/caps (UI-side, groeit mee vanaf nu)
+  function updateClubRecords(ur) {
+    const G = GAME.getState(); const cid = G.clubId; if (!G.clubRecords) G.clubRecords = {}; const R = G.clubRecords;
+    const uHome = ur.homeId === cid; const mine = uHome ? ur.hg : ur.ag, theirs = uHome ? ur.ag : ur.hg;
+    const oppId = uHome ? ur.awayId : ur.homeId; const oppName = G.clubs[oppId] ? G.clubs[oppId].short : "?"; const season = G.season;
+    const marg = mine - theirs;
+    if (mine > theirs && (!R.biggestWin || marg > R.biggestWin.marg || (marg === R.biggestWin.marg && mine > R.biggestWin.gf))) R.biggestWin = { score: mine + "-" + theirs, marg, gf: mine, opp: oppName, season };
+    if (theirs > mine && (!R.biggestLoss || (theirs - mine) > R.biggestLoss.marg)) R.biggestLoss = { score: mine + "-" + theirs, marg: theirs - mine, opp: oppName, season };
+    R.curStreak = (mine > theirs) ? (R.curStreak || 0) + 1 : 0;
+    if ((R.curStreak || 0) > (R.bestStreak || 0)) R.bestStreak = R.curStreak;
+    if (!G.legends) G.legends = {};
+    (ur.events || []).forEach(e => { if (e.type === "goal" && e.player) { const p = G.players[e.player]; if (p && p.club === cid) { const L = G.legends[e.player] = G.legends[e.player] || { name: p.name, goals: 0, apps: 0 }; L.goals++; L.name = p.name; } } });
+    Object.keys(ur.minutesPlayed || {}).forEach(id => { const p = G.players[id]; if (p && p.club === cid) { const L = G.legends[id] = G.legends[id] || { name: p.name, goals: 0, apps: 0 }; L.apps = (L.apps || 0) + 1; L.name = p.name; } });
+  }
+  function clubHistoryPanel() {
+    const G = GAME.getState(); const rec = G.records || {}; const cr = G.clubRecords || {};
+    const legends = Object.keys(G.legends || {}).map(id => Object.assign({ id }, G.legends[id]));
+    const topScorers = legends.slice().sort((a, b) => (b.goals || 0) - (a.goals || 0)).filter(l => l.goals > 0).slice(0, 5);
+    return `<div class="panel"><h3>📜 Clubhistorie &amp; records</h3>
+      <div class="grid3">
+        <div class="kpi"><div class="v">${rec.titles || 0}</div><div class="l">Landstitels</div></div>
+        <div class="kpi"><div class="v">${rec.cups || 0}</div><div class="l">Bekers</div></div>
+        <div class="kpi"><div class="v">${(rec.euro || 0) + (rec.conf || 0)}</div><div class="l">Europese prijzen</div></div>
+      </div>
+      <div class="grid2" style="margin-top:8px">
+        <div><div class="muted or-lbl">Clubrecords (jouw tijdperk)</div>
+          <div class="rec-row"><span>Grootste zege</span><b>${cr.biggestWin ? cr.biggestWin.score + " vs " + cr.biggestWin.opp : "—"}</b></div>
+          <div class="rec-row"><span>Zwaarste nederlaag</span><b>${cr.biggestLoss ? cr.biggestLoss.score + " vs " + cr.biggestLoss.opp : "—"}</b></div>
+          <div class="rec-row"><span>Langste zegereeks</span><b>${cr.bestStreak || 0}</b></div>
+          <div class="rec-row"><span>Langst ongeslagen</span><b>${rec.longestUnbeaten || 0}</b></div>
+        </div>
+        <div><div class="muted or-lbl">Clubtopscorers (sinds jouw komst)</div>${topScorers.length ? topScorers.map(l => `<div class="rec-row" style="cursor:pointer" onclick="UI.playerCard(${l.id})"><span>${l.name} <span class="muted">${l.apps || 0} wed.</span></span><b>${l.goals}</b></div>`).join("") : "<span class='muted'>Nog geen doelpunten geregistreerd.</span>"}</div>
+      </div></div>`;
   }
   function startShootout(cb) { live.so = { us: 0, them: 0, round: 0, cb, history: [] }; showShootout(); }
   function showShootout() {
@@ -9811,6 +9942,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           <hr><button class="btn sm" onclick="UI.negotiateOwnContract()">Eigen contract bespreken</button> <button class="btn danger sm" onclick="UI.confirmRetire()">Met pensioen</button>
         </div>
       </div>
+      ${clubHistoryPanel()}
       ${trophyCabinet()}
       ${badgeGrid()}`;
   }
@@ -9887,7 +10019,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     promoteYouth, signYouth, fireYouthScout, openHireYouthScout, pickYouthScout,
     setTactic, setTraining, setFlank, toggleOffside, setRole, setSlotRole, savePlanB, savePreset, applyPreset, switchPlan,
     startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance,
-    setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper,
+    setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper, onbTour, onbDone,
     negotiateOwnContract, confirmRetire, openPress, pickPress, takeJob,
     setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch,
     doScout, setRange, removeFocus, assignFocusScout, openNewFocus, confirmNewFocus, openHireScout, pickScoutCand, fireScout, upgradeAcademy, setScoutFocus, openStaffHire, pickStaff, setIntensity, doCamp, loanOut,
