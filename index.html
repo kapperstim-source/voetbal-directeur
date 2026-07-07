@@ -389,6 +389,23 @@ tbody tr:last-child td{border-bottom:none}
 .onb-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18)}
 .onb-dots span.on{background:var(--accent,#16e58f);box-shadow:0 0 8px rgba(22,229,143,.6)}
 .onb-actions{display:flex;align-items:center;gap:8px}
+/* competitie-statistieken + programma */
+.stat-tbl{width:100%;border-collapse:collapse;margin-top:4px}
+.stat-tbl td{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.stat-tbl .rk{color:var(--muted,#90a2c4);width:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat-tbl .tbl-num{text-align:right;font-variant-numeric:tabular-nums}
+.fd{display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;font-size:9px;font-weight:800;margin-left:2px;color:#0b1220}
+.fd.w{background:var(--accent,#16e58f)}.fd.g{background:var(--gold,#f0c040)}.fd.v{background:var(--bad,#e5484d);color:#fff}
+.panel-sub{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:8px}
+.up-row{display:flex;align-items:center;gap:2px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+/* jeugd-intake dag */
+.intake-banner{padding:12px 14px;border-radius:14px;background:linear-gradient(160deg,rgba(240,192,64,.12),rgba(22,229,143,.05));border:1px solid rgba(240,192,64,.3);margin-bottom:14px}
+.intake-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.intake-card{text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:transform .15s,border-color .15s}
+.intake-card:hover{transform:translateY(-2px);border-color:var(--gold,#f0c040)}
+.intake-card svg{margin:0 auto}
+.ic-nm{font-weight:700;font-size:12px;margin-top:4px}
+.ic-pot{font-size:11px;color:var(--gold,#f0c040);font-weight:700;margin-top:2px}
 /* spelerkaart-verdieping */
 .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 @media(max-width:520px){.prof-grid{grid-template-columns:1fr}}
@@ -6525,11 +6542,19 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     commercialSeasonUpdate(summary); // commerciële deals: bonussen uitbetalen + looptijd aftellen
     fanbaseGrow(summary); ownerSeasonEffect(summary); // directeur-laag: fanbase + investering eigenaar
 
+    const _preYouth = new Set((G.youth && G.youth.players) || []);
     const youth = global.SCOUT.generateYouthIntake(G);
     G.scouting.prospects = [];
     (G.scouting.focuses || []).forEach(f => { f.found = []; f.progress = 0; f.done = false; }); // focuses scannen het nieuwe seizoen opnieuw
     global.SCOUT.findProspects(G, 6);
     youthSeasonUpdate();   // jeugd: doorstroming, nieuwe lichting, jeugdtoernooi
+    // JEUGD-INTAKE DAG: onthul de nieuwe lichting
+    const newYouth = ((G.youth && G.youth.players) || []).filter(id => !_preYouth.has(id));
+    if (newYouth.length) {
+      G.youthIntakeNew = newYouth.slice();
+      const best = newYouth.map(id => G.players[id]).filter(Boolean).sort((a, b) => (b.pot || 0) - (a.pot || 0))[0];
+      if (best) addInbox("Nieuwe jeugdlichting binnen", `De jeugdopleiding heeft ${newYouth.length} nieuwe talenten afgeleverd. Grootste belofte: ${best.name} (${best.age} jr, potentie ${best.pot}). Bekijk de hele lichting bij Jeugd.`, { from: "Hoofd jeugdopleiding" });
+    }
 
     G.season++; G.week = 0; G.offersIn = [];
     if (G.training) { G.training.campUsed = false; G.training.friendlyUsed = false; }
@@ -9193,6 +9218,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const tabs = [["stand", "Stand"], ["programma", "Programma"], ["beker", cupName()]];
     if (G.euro.in) tabs.push(["europa", (G.euro.name || "Europa")]);
     if (G.conf && G.conf.in) tabs.push(["conf", "Conference"]);
+    tabs.push(["stats", "📊 Statistieken"]);
     tabs.push(["prijzen", "🏆 Prijzenkast"]);
     const seasonDone = GAME.seasonOver();
     let finishBtn = seasonDone ? `<div class="panel center"><h3>Seizoen ${G.season} afgelopen</h3><p class="muted" style="margin:10px 0">Promotie/degradatie, jeugd en transfers worden verwerkt.</p><button class="btn primary" onclick="UI.endSeason()">Seizoen afronden & doorgaan ▶</button></div>` : "";
@@ -9206,6 +9232,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     else if (compTab === "programma") el.innerHTML = programmaHtml(G);
     else if (compTab === "beker") el.innerHTML = knvbHtml(G);
     else if (compTab === "conf") el.innerHTML = confHtml(G);
+    else if (compTab === "stats") el.innerHTML = statsHtml(G);
     else if (compTab === "prijzen") el.innerHTML = prijzenkastHtml(G);
     else el.innerHTML = euroHtml(G);
   }
@@ -9242,10 +9269,56 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="tbl-scroll"><table><thead><tr><th>#</th><th>Club</th><th class="tbl-num">G</th><th class="tbl-num">W</th><th class="tbl-num">GL</th><th class="tbl-num">V</th><th class="tbl-num">Dp</th><th class="tbl-num">DS</th><th class="tbl-num">Ptn</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="muted" style="margin-top:10px;font-size:12px">${div === 1 ? "🔴 onderste 2 degraderen · top 3 → Europa" : "🟢 bovenste 2 promoveren"}</p>`;
   }
+  function myUpcoming(G, n) {
+    const div = G.clubs[G.clubId].div; const rounds = G.fixtures[div] || []; const ptr = G.leaguePtr[div]; const out = [];
+    for (let r = ptr; r < rounds.length && out.length < n; r++) {
+      const mt = (rounds[r] || []).find(mm => mm.home === G.clubId || mm.away === G.clubId);
+      if (mt) { const home = mt.home === G.clubId; out.push({ round: r + 1, opp: home ? mt.away : mt.home, home }); }
+    }
+    return out;
+  }
   function programmaHtml(G) {
     const div = G.clubs[G.clubId].div; const ptr = G.leaguePtr[div]; const round = G.fixtures[div][ptr];
-    if (!round) return "<p class='muted'>Geen competitiewedstrijden meer.</p>";
-    return `<h3>Speelronde ${ptr + 1}</h3>` + round.map(mt => `<div class="flexbar" style="padding:6px 0;border-bottom:1px solid var(--line)">${clubBadge(mt.home, 20)} <b>${G.clubs[mt.home].name}</b><span class="spacer"></span><span class="muted">vs</span><span class="spacer"></span><b>${G.clubs[mt.away].name}</b> ${clubBadge(mt.away, 20)}</div>`).join("");
+    const up = myUpcoming(G, 6);
+    let mine = "";
+    if (up.length) {
+      const avg = Math.round(up.reduce((s, u) => s + G.clubs[u.opp].strength, 0) / up.length);
+      const myStr = G.clubs[G.clubId].strength;
+      const note = avg > myStr + 3 ? '<span class="pill red">pittig programma</span>' : avg < myStr - 3 ? '<span class="pill green">gunstig programma</span>' : '<span class="pill">gemiddeld programma</span>';
+      mine = `<div class="panel-sub"><div class="flexbar" style="margin-bottom:6px"><b>📅 Jouw komende duels</b><span class="spacer"></span>${note}</div>` +
+        up.map(u => `<div class="up-row"><span class="muted" style="flex:0 0 42px">R${u.round}</span>${clubBadge(u.opp, 20)}<b style="margin-left:6px">${G.clubs[u.opp].name}</b><span class="spacer"></span><span class="pill ${u.home ? "green" : ""}" style="font-size:10px">${u.home ? "THUIS" : "UIT"}</span><span class="muted" style="margin-left:8px">${G.clubs[u.opp].strength}</span></div>`).join("") + `</div>`;
+    }
+    if (!round) return mine || "<p class='muted'>Geen competitiewedstrijden meer.</p>";
+    return mine + `<h3 style="margin-top:14px">Speelronde ${ptr + 1} — alle duels</h3>` + round.map(mt => `<div class="flexbar" style="padding:6px 0;border-bottom:1px solid var(--line)">${clubBadge(mt.home, 20)} <b>${G.clubs[mt.home].name}</b><span class="spacer"></span><span class="muted">vs</span><span class="spacer"></span><b>${G.clubs[mt.away].name}</b> ${clubBadge(mt.away, 20)}</div>`).join("");
+  }
+  function statsHtml(G) {
+    const div = G.clubs[G.clubId].div;
+    const clubIds = Object.keys(G.clubs).filter(c => G.clubs[c].div === div);
+    let players = [];
+    clubIds.forEach(cid => { const sq = G.squads[cid]; if (!sq) return; sq.list.forEach(id => { const p = sq.players[id]; if (p) players.push(p); }); });
+    const scorers = players.filter(p => (p.sGoals || 0) > 0).sort((a, b) => (b.sGoals - a.sGoals) || (b.sAssists - a.sAssists)).slice(0, 10);
+    const assisters = players.filter(p => (p.sAssists || 0) > 0).sort((a, b) => b.sAssists - a.sAssists).slice(0, 8);
+    const res = (G.results && G.results[div]) || [];
+    const cs = {}, formArr = {}; clubIds.forEach(c => { cs[c] = 0; formArr[c] = []; });
+    res.forEach(r => {
+      if (r.ag === 0 && cs[r.home] != null) cs[r.home]++; if (r.hg === 0 && cs[r.away] != null) cs[r.away]++;
+      if (formArr[r.home]) formArr[r.home].push(r.hg > r.ag ? "W" : r.hg < r.ag ? "V" : "G");
+      if (formArr[r.away]) formArr[r.away].push(r.ag > r.hg ? "W" : r.ag < r.hg ? "V" : "G");
+    });
+    const csTop = clubIds.map(c => ({ c, n: cs[c] })).filter(x => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 6);
+    const formTop = clubIds.map(c => { const f = formArr[c].slice(-5); return { c, f, pts: f.reduce((s, x) => s + (x === "W" ? 3 : x === "G" ? 1 : 0), 0) }; }).filter(x => x.f.length).sort((a, b) => b.pts - a.pts).slice(0, 6);
+    const clubShort = c => G.clubs[c] ? G.clubs[c].short : "?";
+    const meCls = p => p.club === G.clubId ? ' style="background:rgba(22,229,143,.06)"' : "";
+    const formDots = f => f.map(x => `<span class="fd ${x === "W" ? "w" : x === "G" ? "g" : "v"}">${x}</span>`).join("");
+    const rank = (arr, cell) => arr.length ? `<table class="stat-tbl"><tbody>${arr.map((x, i) => cell(x, i)).join("")}</tbody></table>` : "<p class='muted'>Nog geen data dit seizoen.</p>";
+    return `<div class="grid2">
+      <div><h3>👑 Topscorers</h3>${rank(scorers, (p, i) => `<tr${meCls(p)}><td class="rk">${i + 1}</td><td onclick="UI.playerCard(${p.id})" style="cursor:pointer"><b>${lastName(p.name)}</b> <span class="muted">${clubShort(p.club)}</span></td><td class="tbl-num"><b>${p.sGoals}</b></td></tr>`)}</div>
+      <div><h3>🎯 Assists</h3>${rank(assisters, (p, i) => `<tr${meCls(p)}><td class="rk">${i + 1}</td><td onclick="UI.playerCard(${p.id})" style="cursor:pointer"><b>${lastName(p.name)}</b> <span class="muted">${clubShort(p.club)}</span></td><td class="tbl-num"><b>${p.sAssists}</b></td></tr>`)}</div>
+    </div>
+    <div class="grid2" style="margin-top:6px">
+      <div><h3>🧤 Meeste clean sheets</h3>${rank(csTop, (x, i) => `<tr${x.c === G.clubId ? ' style="background:rgba(22,229,143,.06)"' : ""}><td class="rk">${i + 1}</td><td>${clubBadge(x.c, 18)} <b>${G.clubs[x.c].name}</b></td><td class="tbl-num"><b>${x.n}</b></td></tr>`)}</div>
+      <div><h3>📈 Vorm (laatste 5)</h3>${rank(formTop, (x, i) => `<tr${x.c === G.clubId ? ' style="background:rgba(22,229,143,.06)"' : ""}><td class="rk">${i + 1}</td><td>${clubBadge(x.c, 18)} <b>${clubShort(x.c)}</b></td><td style="text-align:right">${formDots(x.f)}</td></tr>`)}</div>
+    </div>`;
   }
   function knvbHtml(G) {
     const K = G.knvb;
@@ -9590,6 +9663,13 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function loanOut(pid) { const r = GAME.loanOutPlayer(pid); toast(r.msg); if (r.ok) { closeModal(); GAME.saveGame(); renderScreen(); } }
 
   // ============================================================ JEUGDAFDELING
+  function intakeBanner(G) {
+    const ids = (G.youthIntakeNew || []).map(id => G.players[id]).filter(Boolean); if (!ids.length) return "";
+    const sorted = ids.slice().sort((a, b) => (b.pot || 0) - (a.pot || 0));
+    return `<div class="intake-banner"><div class="flexbar" style="margin-bottom:8px"><b>✨ Jeugd-intake dag — nieuwe lichting (${sorted.length})</b><span class="spacer"></span><button class="btn sm" onclick="UI.dismissIntake()">Begrepen</button></div>
+      <div class="intake-grid">${sorted.map(p => `<div class="intake-card" onclick="UI.playerCard(${p.id})">${playerAvatar(p, 34)}<div class="ic-nm">${lastName(p.name)}</div><div class="muted" style="font-size:11px">${p.age}j · ${posChip(p.pos)}</div><div class="ic-pot">POT ${potDisplay(p)}</div></div>`).join("")}</div></div>`;
+  }
+  function dismissIntake() { const G = GAME.getState(); G.youthIntakeNew = null; GAME.saveGame(); renderScreen(); }
   function scrJeugd(m) {
     const G = GAME.getState(); const y = G.youth || { players: [], prospects: [], scouts: [] };
     const players = (y.players || []).map(id => G.players[id]).filter(Boolean).sort((a, b) => (b.pot - a.pot) || (b.ovr - a.ovr));
@@ -9600,7 +9680,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const scoutsHtml = scouts.map(s => `<div class="sub-row"><b>${s.name}</b> <span class="muted">${s.region}</span><span class="spacer"></span><span class="muted" style="font-size:12px">JPP ${s.jpp} · €${s.wage.toFixed(1)}k</span> <button class="btn sm" onclick="UI.fireYouthScout(${s.id})">✕</button></div>`).join("") || "<p class='muted'>Geen jeugdscouts.</p>";
     const t = y.tournament;
     const tourHtml = t ? `<p style="font-size:15px">Laatste toernooi (seizoen ${t.season}): <b>${t.place}</b></p><p class="muted">${t.w}W ${t.d}G ${t.l}V · ${t.gf}-${t.ga}${t.stars && t.stars.length ? " · uitblinker: " + t.stars[0] : ""}</p>` : "<p class='muted'>Nog geen toernooi gespeeld. Het jeugdtoernooi wordt elk seizoen gespeeld; uitblinkers groeien extra.</p>";
-    m.innerHTML = topbar("Jeugdafdeling", "De talenten van de toekomst") + `
+    m.innerHTML = topbar("Jeugdafdeling", "De talenten van de toekomst") + intakeBanner(G) + `
       <div class="grid2">
         <div class="panel"><h3>🎓 Jeugdopleiding (niveau ${acad})</h3><p class="muted" style="margin-bottom:8px">Hoger niveau = meer en betere jeugdinstroom + snellere groei.</p>${acad >= 5 ? "<p class='muted'>Maximaal niveau.</p>" : `<button class="btn blue sm" onclick="UI.upgradeAcademy()">Uitbreiden (€${acad * 4}M)</button>`}</div>
         <div class="panel"><h3>🏆 Jeugdtoernooi</h3>${tourHtml}</div>
@@ -10016,7 +10096,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     clickPlayer, setFormation, autoPick, playerCard, doRenew, buyClause,
     setSquadView, sortSquad, openContract, confirmContract,
     addMentor, removeMentor, praise, criticize, setIndTrain, assistantAction, changeStatus, promisePT,
-    promoteYouth, signYouth, fireYouthScout, openHireYouthScout, pickYouthScout,
+    promoteYouth, signYouth, fireYouthScout, openHireYouthScout, pickYouthScout, dismissIntake,
     setTactic, setTraining, setFlank, toggleOffside, setRole, setSlotRole, savePlanB, savePreset, applyPreset, switchPlan,
     startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance,
     setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper, onbTour, onbDone,
