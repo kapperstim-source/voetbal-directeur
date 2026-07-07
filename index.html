@@ -406,6 +406,13 @@ tbody tr:last-child td{border-bottom:none}
 .intake-card svg{margin:0 auto}
 .ic-nm{font-weight:700;font-size:12px;margin-top:4px}
 .ic-pot{font-size:11px;color:var(--gold,#f0c040);font-weight:700;margin-top:2px}
+/* extra-hub (extensie-features) */
+.extra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.extra-tile{padding:16px 12px;border-radius:14px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;text-align:center}
+.extra-tile:hover{transform:translateY(-3px);border-color:var(--accent,#16e58f);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.et-ico{font-size:30px;line-height:1;margin-bottom:6px}
+.et-nm{font-weight:800;font-size:14px}
+.et-desc{font-size:11px;margin-top:4px;line-height:1.35}
 /* spelerkaart-verdieping */
 .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 @media(max-width:520px){.prof-grid{grid-template-columns:1fr}}
@@ -7687,6 +7694,12 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   let compTab = "stand";
   let navOpen = false;
   let live = null; // live-match state
+  // ---- EXTENSIE-API: losse js/ext/*.js bestanden registreren zichzelf (nieuwe schermen/panelen/CSS) ----
+  const EXT = { screens: {}, hooks: {} };
+  function extScreen(key, def) { if (key && def && typeof def.render === "function") EXT.screens[key] = def; }
+  function extHook(point, fn) { if (typeof fn === "function") { (EXT.hooks[point] = EXT.hooks[point] || []).push(fn); } }
+  function extCss(str) { try { const s = document.createElement("style"); s.textContent = str; (document.head || document.documentElement).appendChild(s); } catch (e) { } }
+  function extHtml(point) { const fns = EXT.hooks[point] || []; const args = [].slice.call(arguments, 1); return fns.map(fn => { try { return fn.apply(null, [GAME].concat(args)) || ""; } catch (e) { return ""; } }).join(""); }
   let cmpA = null, cmpB = null; // vergelijktool
   let transferSearch = { q: "", pos: "", ageMin: "", ageMax: "", nat: "", league: "", club: "", status: "" }; // spelers-zoekfilters
   let seasonOffers = null; // openstaande club-aanbiedingen, getoond ná de seizoensrecap
@@ -7778,9 +7791,10 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     inbox: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3.2 6.6l8.8 6.4 8.8-6.4"/>',
     fans: '<circle cx="6.5" cy="9" r="2.1"/><circle cx="17.5" cy="9" r="2.1"/><circle cx="12" cy="7.4" r="2.5"/><path d="M2.6 18.5c0-2.3 1.7-4 3.9-4M21.4 18.5c0-2.3-1.7-4-3.9-4M7 18.5c0-2.9 2-5 5-5s5 2.1 5 5"/>',
     settings: '<path d="M5 8.5h14M5 15.5h14"/><circle cx="10" cy="8.5" r="2.3"/><circle cx="14" cy="15.5" r="2.3"/>',
-    analyse: '<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="2.6" height="5.5"/><rect x="11.7" y="8.5" width="2.6" height="9"/><rect x="16.4" y="5.5" width="2.6" height="12"/>'
+    analyse: '<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="2.6" height="5.5"/><rect x="11.7" y="8.5" width="2.6" height="9"/><rect x="16.4" y="5.5" width="2.6" height="12"/>',
+    extra: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>'
   };
-  function icon(name, size) { size = size || 20; return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" style="display:block">${ICONS[name] || ICONS.dashboard}</svg>`; }
+  function icon(name, size) { size = size || 20; const path = ICONS[name] || (EXT.screens[name] && EXT.screens[name].icon) || ICONS.dashboard; return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" style="display:block">${path}</svg>`; }
   function clubBadge(cid, size) {
     const G = GAME.getState(); const c = G.clubs[cid];
     return crest(c.col, crestLabel(c), size || 34, cid === G.clubId);
@@ -7932,7 +7946,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ["dashboard", "🏠", "Dashboard"], ["match", "⚽", "Wedstrijd"], ["squad", "👥", "Opstelling"],
       ["kleedkamer", "🤝", "Kleedkamer"], ["tactics", "📋", "Tactiek"], ["analyse", "📊", "Analyse"], ["transfers", "💱", "Transfers"], ["scouting", "🔍", "Scouting"], ["jeugd", "🎓", "Jeugd"],
       ["competitions", "🏆", "Competities"], ["news", "📰", "Nieuws"], ["career", "🎖️", "Carrière"],
-      ["directie", "🏛️", "Directie"], ["fans", "📣", "Fans"], ["finances", "💰", "Financiën"], ["inbox", "📨", "Inbox", unread], ["settings", "⚙️", "Meer"]
+      ["directie", "🏛️", "Directie"], ["fans", "📣", "Fans"], ["finances", "💰", "Financiën"],
+      ...(Object.keys(EXT.screens).length ? [["extra", "🧩", "Extra"]] : []),
+      ["inbox", "📨", "Inbox", unread], ["settings", "⚙️", "Instellingen"]
     ].map(n => `<div class="nav-item ${screen === n[0] ? "active" : ""}" onclick="UI.nav('${n[0]}')"><span class="ico">${icon(n[0])}</span><span>${n[2]}</span>${n[3] ? `<span class="nav-badge">${n[3]}</span>` : ""}</div>`).join("");
     app().innerHTML = `
       <div class="mobilebar"><button class="hamb" onclick="UI.toggleNav()">☰</button><b>${club.name}</b><span class="mb-budget">${fmtM(club.budget)}</span></div>
@@ -7969,7 +7985,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function renderScreen() {
     const m = $("#main"); if (!m) return;
-    ({ dashboard: scrDashboard, match: scrMatch, squad: scrSquad, tactics: scrTactics, analyse: scrAnalyse, transfers: scrTransfers, scouting: scrScouting, competitions: scrCompetitions, news: scrNews, career: scrCareer, kleedkamer: scrKleedkamer, jeugd: scrJeugd, directie: scrDirectie, fans: scrFans, finances: scrFinances, inbox: scrInbox, settings: scrSettings }[screen] || scrDashboard)(m);
+    const _ext = EXT.screens[screen];
+    if (_ext) { try { _ext.render(m, GAME); } catch (e) { m.innerHTML = "<div class='panel'><p class='muted'>Deze sectie kon niet laden.</p></div>"; } deEmoji(m); return; }
+    ({ dashboard: scrDashboard, match: scrMatch, squad: scrSquad, tactics: scrTactics, analyse: scrAnalyse, extra: scrExtraHub, transfers: scrTransfers, scouting: scrScouting, competitions: scrCompetitions, news: scrNews, career: scrCareer, kleedkamer: scrKleedkamer, jeugd: scrJeugd, directie: scrDirectie, fans: scrFans, finances: scrFinances, inbox: scrInbox, settings: scrSettings }[screen] || scrDashboard)(m);
     deEmoji(m);
   }
 
@@ -8299,6 +8317,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div class="prof-box"><div class="muted" style="margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:1px">🎯 Beste rollen</div>${roles.length ? roles.map(r => `<div class="role-suit"><span>${r.name}</span><span class="rs-bar"><i style="width:${r.suit}%;background:${r.suit >= 78 ? "var(--accent)" : r.suit >= 62 ? "var(--gold)" : "var(--warn)"}"></i></span><b>${r.suit}</b></div>`).join("") : "<span class='muted'>—</span>"}</div>
       </div>
       <div class="dev-box"><div class="flexbar"><span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">📈 Verwachte ontwikkeling</span><span class="spacer"></span><span class="muted" style="font-size:11px">nu ${p.ovr} · piek ~${Math.max(p.ovr, projOvr(p, 27))}</span></div>${devCurveSVG(p)}</div>
+      ${extHtml("playerCard", p)}
       ${statusBlock}
       <div class="flexbar" style="margin-top:14px;flex-wrap:wrap;gap:6px">${mine ? `<button class="btn blue sm" onclick="UI.doRenew(${p.id})">Verlengen</button><button class="btn warn sm" onclick="UI.openSell(${p.id})">Verkopen</button><button class="btn sm" onclick="UI.praise(${p.id})">👍 Compliment</button><button class="btn sm" onclick="UI.criticize(${p.id})">👎 Aanspreken</button>${p.age <= 21 && !p.loanedFrom ? `<button class="btn sm" onclick="UI.loanOut(${p.id})">Verhuur (ervaring)</button>` : ""}<select class="live-select" title="Individuele training" onchange="UI.setIndTrain(${p.id},this.value)" style="padding:4px;font-size:12px">${["", "Aanvallen", "Verdedigen", "Conditie", "Techniek"].map(o => `<option value="${o}" ${(p.indTrain || "") === o ? "selected" : ""}>${o || "Teamtraining"}</option>`).join("")}</select>` : `<button class="btn primary sm" onclick="UI.openBuy(${p.id})">Bod</button>${knowOf(p) < 90 ? `<button class="btn sm" onclick="UI.doScout(${p.id})">🔍 Scout${knowOf(p) > 0 ? " (" + knowOf(p) + "%)" : ""}</button>` : ""}${p.releaseClause ? `<button class="btn primary sm" onclick="UI.buyClause(${p.id})">Afkoopsom (${fmtM(p.releaseClause)})</button>` : ""}`}</div>`, true);
   }
@@ -8356,10 +8375,16 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="grid2">
         <div class="panel"><h3>💰 Grootverdieners</h3>${earners.map(p => `<div class="flexbar" style="padding:3px 0"><span>${lastName(p.name)} <span class="muted">${p.age}j</span></span><span class="spacer"></span><b>€${p.wage.toFixed(1)}k</b></div>`).join("")}</div>
         <div class="panel"><h3>📅 Aflopende contracten</h3>${expiring.length ? expiring.map(p => `<div class="flexbar" style="padding:3px 0;cursor:pointer" onclick="UI.playerCard(${p.id})"><span>${lastName(p.name)} ${ovrMini(p.ovr)}</span><span class="spacer"></span><span class="${(p.contract || 0) <= 1 ? "pill red" : "muted"}">${p.contract || 0} jaar</span></div>`).join("") : "<p class='muted'>Geen spelers met een kort contract.</p>"}</div>
-      </div>`;
+      </div>
+      ${extHtml("analyse")}`;
   }
   function lineNum(pos) { const o = { GK: 0, DEF: 1, MID: 2, ATT: 3 }; return o[line(pos)] != null ? o[line(pos)] : 9; }
   function ovrMini(v) { const c = v >= 80 ? "var(--accent)" : v >= 68 ? "var(--gold)" : "var(--muted)"; return `<span style="color:${c};font-weight:700;font-size:12px">${v}</span>`; }
+  function scrExtraHub(m) {
+    const keys = Object.keys(EXT.screens);
+    const tiles = keys.map(k => { const d = EXT.screens[k]; return `<div class="extra-tile" onclick="UI.nav('${k}')"><div class="et-ico">${d.emoji || "🧩"}</div><div class="et-nm">${d.label || k}</div>${d.desc ? `<div class="et-desc muted">${d.desc}</div>` : ""}</div>`; }).join("");
+    m.innerHTML = topbar("Extra", "Extra schermen & hulpmiddelen") + `<div class="panel"><h3>🧩 Extra features (${keys.length})</h3>${keys.length ? `<div class="extra-grid">${tiles}</div>` : "<p class='muted'>Geen extra's geladen.</p>"}</div>`;
+  }
 
   // ============================================================ TACTIEK
   function scrTactics(m) {
@@ -8480,6 +8505,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           ${compare}
           <div class="tac-read"><div class="tr-head">🧠 Tactische voorbeschouwing</div>${tacticalRead(G, opp).map(x => `<div class="tr-line">${x}</div>`).join("")}</div>
           ${opponentReport(G, opp)}
+          ${extHtml("prematch", opp)}
           ${tired ? `<div class="center" style="margin-top:10px"><span class="pill red">⚠ ${tired} basisspeler(s) onder 65% fit</span></div>` : ""}
           <div class="match-actions">
             <button class="btn sm" onclick="UI.nav('squad')">Opstelling</button><button class="btn sm" onclick="UI.nav('tactics')">Tactiek</button>
@@ -10104,10 +10130,2451 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch,
     doScout, setRange, removeFocus, assignFocusScout, openNewFocus, confirmNewFocus, openHireScout, pickScoutCand, fireScout, upgradeAcademy, setScoutFocus, openStaffHire, pickStaff, setIntensity, doCamp, loanOut,
     expandStadium, updateStadCost, upgradeFacility, doSponsors, openCommercial, pickCommercial, setTicket, setSeasonTicket, moveBudget, requestBudget, setWinBonus, doFinLoan, doInvestor, save, quitToMenu,
-    toggleTheme, toggleSound, setDiff, saveSlot, loadSlot, doExport, doImport, showHelp
+    toggleTheme, toggleSound, setDiff, saveSlot, loadSlot, doExport, doImport, showHelp,
+    // EXTENSIE-API voor js/ext/*.js bestanden
+    ext: {
+      screen: extScreen, hook: extHook, css: extCss,
+      // toolkit: ext-bestanden draaien buiten deze closure en gebruiken deze helpers voor een consistente look
+      util: {
+        topbar, fmtM, fmtMoney: fmtM, lastName, playerAvatar, clubBadge, crest, ovrBadge, ovrMini, posChip, potDisplay, radarSVG, icon, attrRow, formBadge, contrast, line, knowOf,
+        renderScreen, closeModal, modal, toast,
+        players(cid) { const G = GAME.getState(); const c = cid || G.clubId; const sq = G.squads[c]; return sq ? sq.list.map(id => sq.players[id]).filter(Boolean) : []; },
+        state() { return GAME.getState(); }
+      }
+    }
   };
   document.addEventListener("DOMContentLoaded", init);
 })(typeof window !== "undefined" ? window : this);
+
+/* ==== ext/feat_club_profile.js ==== */
+/* EXTENSIE: Clubprofiel — identiteit & historie van jouw club.
+   Zelfstandig ext-bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".cp-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap}" +
+    ".cp-crest{flex:0 0 auto}" +
+    ".cp-nm{font-weight:800;font-size:22px;line-height:1.1}" +
+    ".cp-sub{font-size:12px;color:var(--muted);margin-top:4px}" +
+    ".cp-cols{display:flex;gap:8px;margin-top:10px}" +
+    ".cp-sw{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);" +
+      "box-shadow:0 1px 3px rgba(0,0,0,.35)}" +
+    ".cp-swwrap{text-align:center}" +
+    ".cp-swwrap .cp-hex{font-size:10px;color:var(--muted);margin-top:3px;font-family:monospace}"
+  );
+
+  // Nette divisie-naam (repliceert de logica uit ui.js, defensief).
+  function divLabel(club) {
+    var L = ((window.LEAGUES || {}) || {})[club.league || "ned"] || {};
+    if (club.div === 1) return L.name || "Hoogste niveau";
+    if (club.div === 2) return (club.league || "ned") === "ned" ? "Eerste Divisie" : "2e niveau";
+    return "Overig";
+  }
+
+  UI.ext.screen("ext_club", {
+    label: "Clubprofiel",
+    emoji: "🛡️",
+    desc: "Identiteit & historie",
+    icon: '<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var cid = G.clubId;
+      var club = (G.clubs && G.clubs[cid]) || {};
+      var rec = G.records || {};
+
+      var name = club.name || "Onbekende club";
+      var city = club.city || "—";
+      var strength = club.strength || 0;
+      var budget = (club.budget != null) ? club.budget : 0;
+      var cols = club.col || [];
+
+      // --- Kleurstalen ---
+      var colsHtml = "";
+      if (cols.length) {
+        colsHtml =
+          '<div class="cp-cols">' +
+            cols.map(function (hex) {
+              var h = hex || "#888888";
+              return '<div class="cp-swwrap">' +
+                '<div class="cp-sw" style="background:' + h + '"></div>' +
+                '<div class="cp-hex">' + h + '</div>' +
+              '</div>';
+            }).join("") +
+          '</div>';
+      } else {
+        colsHtml = '<div class="cp-sub">Geen clubkleuren bekend.</div>';
+      }
+
+      // --- HERO-blok met groot crest ---
+      var hero =
+        '<div class="panel"><div class="cp-hero">' +
+          '<div class="cp-crest">' + U.clubBadge(cid, 60) + '</div>' +
+          '<div>' +
+            '<div class="cp-nm">' + name + '</div>' +
+            '<div class="cp-sub">📍 ' + city +
+              (club.short ? ' · ' + club.short : '') +
+              ' · ' + divLabel(club) +
+            '</div>' +
+            colsHtml +
+          '</div>' +
+        '</div></div>';
+
+      // --- KPI-tegels ---
+      var kpis =
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v">' + strength + '</div><div class="l">Clubsterkte</div></div>' +
+          '<div class="kpi"><div class="v" style="color:var(--gold)">' + U.fmtM(budget) + '</div><div class="l">Transferbudget</div></div>' +
+          '<div class="kpi"><div class="v">' + divLabel(club) + '</div><div class="l">Divisie</div></div>' +
+        '</div>';
+
+      // --- Erelijst ---
+      var titles = rec.titles || 0;
+      var cups = rec.cups || 0;
+      var euro = rec.euro || 0;
+      var conf = rec.conf || 0;
+      var superCups = rec.superCups || 0;
+      var totalPrijzen = titles + cups + euro + conf + superCups;
+
+      var ereRow = function (lbl, val, cls) {
+        return '<div class="flexbar" style="padding:6px 0"><span class="muted">' + lbl + '</span>' +
+          '<span class="spacer"></span><span class="pill ' + (val > 0 ? (cls || 'gold') : '') + '">' + val + '×</span></div>';
+      };
+
+      var erelijst;
+      if (totalPrijzen > 0) {
+        erelijst =
+          '<div class="panel"><h3>🏆 Erelijst (' + totalPrijzen + ')</h3>' +
+            ereRow('Landstitels', titles) +
+            ereRow('Bekers', cups) +
+            ereRow('Europese hoofdprijzen', euro) +
+            ereRow('Conference League', conf) +
+            ereRow('Super Cups', superCups) +
+          '</div>';
+      } else {
+        erelijst =
+          '<div class="panel"><h3>🏆 Erelijst</h3>' +
+            "<p class='muted'>Nog geen prijzen. Word kampioen of win een beker om de erelijst te openen.</p>" +
+          '</div>';
+      }
+
+      // --- Records / clubhistorie ---
+      var unbeaten = rec.longestUnbeaten || 0;
+      var bestWin = rec.bestWin && rec.bestWin.text ? rec.bestWin.text : null;
+
+      var records =
+        '<div class="panel"><h3>📜 Clubrecords</h3>' +
+          '<div class="flexbar" style="padding:6px 0"><span class="muted">Langste reeks ongeslagen</span>' +
+            '<span class="spacer"></span><span class="pill ' + (unbeaten > 0 ? 'green' : '') + '">' + unbeaten + ' duels</span></div>' +
+          '<div class="flexbar" style="padding:6px 0;border-top:1px solid var(--line);margin-top:2px">' +
+            '<span class="muted">Grootste zege</span><span class="spacer"></span>' +
+            (bestWin ? '<strong style="text-align:right;max-width:60%">' + bestWin + '</strong>' : "<span class='muted'>Nog geen</span>") +
+          '</div>' +
+        '</div>';
+
+      m.innerHTML =
+        U.topbar("Clubprofiel", name) +
+        hero +
+        kpis +
+        '<div class="grid2">' + erelijst + records + '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_discipline.js ==== */
+/* EXTENSIE: Discipline — kaarten & schorsingen, divisiebreed.
+   Zelfstandig bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".disc-yc{display:inline-block;width:13px;height:17px;border-radius:2px;background:var(--gold);vertical-align:-3px;margin-left:6px}" +
+    ".disc-rc{display:inline-block;width:13px;height:17px;border-radius:2px;background:var(--bad);vertical-align:-3px;margin-left:4px}"
+  );
+  UI.ext.screen("ext_disc", {
+    label: "Discipline",
+    emoji: "🟨",
+    desc: "Kaarten & schorsingen",
+    icon: '<rect x="6" y="4" width="8" height="12" rx="1.5" transform="rotate(-12 10 10)"/><rect x="10" y="6" width="8" height="12" rx="1.5" transform="rotate(8 14 12)"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var clubs = G.clubs || {};
+      var squads = G.squads || {};
+      var myClub = clubs[G.clubId] || {};
+      var div = myClub.div;
+
+      // Verzamel alle spelers uit clubs in dezelfde divisie
+      var all = [];
+      Object.keys(clubs).forEach(function (cid) {
+        if (clubs[cid].div !== div) return;
+        var sq = squads[cid];
+        if (!sq) return;
+        var pls = sq.players || {};
+        var ids = sq.list || Object.keys(pls);
+        ids.forEach(function (id) {
+          var p = pls[id];
+          if (!p) return;
+          all.push(p);
+        });
+      });
+
+      var totYellow = 0, totRed = 0;
+      all.forEach(function (p) { totYellow += (p.sYellow || 0); totRed += (p.red || 0); });
+
+      var clubName = function (cid) { var c = clubs[cid]; return c ? (c.short || c.name || "?") : "?"; };
+
+      // Top 12 op gele kaarten dit seizoen
+      var byYellow = all.filter(function (p) { return (p.sYellow || 0) > 0; })
+        .sort(function (a, b) {
+          var d = (b.sYellow || 0) - (a.sYellow || 0);
+          if (d !== 0) return d;
+          return (b.red || 0) - (a.red || 0);
+        }).slice(0, 12);
+
+      // Geschorste spelers
+      var suspended = all.filter(function (p) { return (p.suspended || 0) > 0; })
+        .sort(function (a, b) { return (b.suspended || 0) - (a.suspended || 0); });
+
+      var yRow = function (p, i) {
+        var reds = (p.red || 0) > 0 ? ' <span class="disc-rc" title="Rode kaarten"></span> <b>' + p.red + '</b>' : "";
+        return '<div class="flexbar" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="muted" style="width:22px;display:inline-block">' + (i + 1) + '</span>' +
+          U.playerAvatar(p, 24) +
+          '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:8px;font-size:12px">' + clubName(p.club) + '</span>' +
+          '<span class="spacer"></span>' +
+          '<span class="pill gold">' + (p.sYellow || 0) + ' <span class="disc-yc"></span></span>' + reds +
+          '</div>';
+      };
+
+      var sRow = function (p) {
+        var reason = (p.red || 0) > 0 ? "rode kaart" : "5 gele kaarten";
+        return '<div class="flexbar" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          U.playerAvatar(p, 24) +
+          '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:8px;font-size:12px">' + clubName(p.club) + ' · ' + reason + '</span>' +
+          '<span class="spacer"></span>' +
+          '<span class="pill red">' + (p.suspended || 0) + ' duel' + ((p.suspended || 0) === 1 ? "" : "s") + '</span>' +
+          '</div>';
+      };
+
+      m.innerHTML = U.topbar("Discipline", "Kaarten & schorsingen in jouw divisie") +
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v" style="color:var(--gold)">' + totYellow + '</div><div class="l">Gele kaarten</div></div>' +
+        '<div class="kpi"><div class="v" style="color:var(--bad)">' + totRed + '</div><div class="l">Rode kaarten</div></div>' +
+        '<div class="kpi"><div class="v">' + suspended.length + '</div><div class="l">Geschorst</div></div>' +
+        '</div>' +
+        '<div class="panel"><h3>🟨 Meeste gele kaarten (top 12)</h3>' +
+        (byYellow.length ? byYellow.map(yRow).join("") : "<p class='muted'>Nog geen kaarten dit seizoen.</p>") +
+        '</div>' +
+        '<div class="panel"><h3>⛔ Geschorste spelers</h3>' +
+        (suspended.length ? suspended.map(sRow).join("") : "<p class='muted'>Momenteel is er niemand geschorst in de divisie.</p>") +
+        '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_facilities.js ==== */
+/* EXTENSIE: Faciliteiten — read-only overzicht van de clubinfrastructuur.
+   Toont per faciliteit een niveau-balk (1-5). Upgraden gebeurt op het Directie-scherm. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".fac-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:8px 0 4px}" +
+    ".fac-bar i{display:block;height:100%;border-radius:6px}" +
+    ".fac-pips{display:flex;gap:5px;margin-top:6px}" +
+    ".fac-pips span{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.10)}" +
+    ".fac-pips span.on{background:var(--accent)}"
+  );
+
+  // Kleur + label op basis van het niveau (1-5)
+  function lvlColor(lvl) { return lvl >= 4 ? "var(--accent)" : lvl >= 3 ? "var(--gold)" : "var(--bad)"; }
+  function lvlLabel(lvl) {
+    return lvl >= 5 ? "Top" : lvl >= 4 ? "Sterk" : lvl >= 3 ? "Degelijk" : lvl >= 2 ? "Basis" : "Minimaal";
+  }
+  function pips(lvl) {
+    var s = "";
+    for (var i = 1; i <= 5; i++) s += '<span class="' + (i <= lvl ? "on" : "") + '"></span>';
+    return '<div class="fac-pips">' + s + '</div>';
+  }
+
+  // Eén faciliteitkaart (naam, niveau-balk, effect-uitleg)
+  function facCard(naam, effect, lvl) {
+    lvl = Math.max(0, Math.min(5, lvl || 0));
+    var pct = lvl * 20;
+    var c = lvlColor(lvl);
+    return '<div class="panel" style="margin:0">' +
+      '<div class="flexbar"><b>' + naam + '</b><span class="spacer"></span>' +
+      '<span class="pill ' + (lvl >= 4 ? "green" : lvl >= 3 ? "gold" : "") + '">niveau ' + lvl + '/5</span></div>' +
+      '<div class="fac-bar"><i style="width:' + pct + '%;background:' + c + '"></i></div>' +
+      pips(lvl) +
+      '<p class="muted" style="font-size:12px;margin-top:8px">' + (effect || "") + '</p>' +
+      '<p class="muted" style="font-size:12px">Beoordeling: <b style="color:' + c + '">' + lvlLabel(lvl) + '</b></p>' +
+      '</div>';
+  }
+
+  UI.ext.screen("ext_fac", {
+    label: "Faciliteiten",
+    emoji: "🏟️",
+    desc: "Clubinfrastructuur",
+    icon: '<rect x="3.5" y="8" width="17" height="12" rx="2"/><path d="M3.5 8l8.5-4.5L20.5 8" stroke-width="2"/><path d="M9 20v-5h6v5"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var club = (G.clubs && G.clubId != null) ? (G.clubs[G.clubId] || {}) : {};
+      var fac = G.facilities || {};
+      var sc = G.scouting || {};
+      var academy = (sc.academyLevel != null) ? sc.academyLevel : 0;
+
+      // Lijst faciliteiten uit de engine (fallback op vaste set als GAME.FACILITIES ontbreekt)
+      var defs = (GAME.FACILITIES && GAME.FACILITIES.length) ? GAME.FACILITIES : [
+        ["training", "Trainingscomplex", "Snellere spelersontwikkeling"],
+        ["medical", "Medisch centrum", "Minder & kortere blessures"],
+        ["data", "Data-afdeling", "Scherpere scouting & analyse"],
+        ["hospitality", "Hospitality & VIP-boxen", "Hogere wedstrijdinkomsten"]
+      ];
+
+      // Gemiddeld niveau over de 4 faciliteiten (voor KPI)
+      var som = 0, n = 0;
+      for (var i = 0; i < defs.length; i++) {
+        var lv = fac[defs[i][0]] || 0;
+        if (lv > 0) { som += lv; n++; }
+      }
+      var gem = n ? (som / n) : 0;
+
+      // Stadion + fanbase (extra context, read-only)
+      var capNum = club.cap || 0;
+      var capTxt = capNum ? (capNum >= 1000 ? Math.round(capNum / 1000) + "K" : String(capNum)) : "—";
+      var fanbase = (G.fanbase != null) ? G.fanbase : null;
+      var bouw = G.stadiumBuild || null;
+
+      var kpis =
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v" style="color:' + lvlColor(Math.round(gem)) + '">' + (gem ? gem.toFixed(1) : "—") + '</div><div class="l">Gemiddeld niveau</div></div>' +
+        '<div class="kpi"><div class="v">' + capTxt + '</div><div class="l">Stadioncapaciteit</div></div>' +
+        '<div class="kpi"><div class="v">' + (fanbase != null ? fanbase : "—") + '</div><div class="l">Fanbase</div></div>' +
+        '</div>';
+
+      // Faciliteit-kaarten
+      var cards = defs.map(function (f) {
+        return facCard(f[1] || f[0], f[2] || "", fac[f[0]] || 0);
+      }).join("");
+
+      // Jeugdacademie apart (leeft in G.scouting)
+      var academyCard = facCard("Jeugdacademie", "Betere jeugdinstroom en snellere ontwikkeling van talenten.", academy);
+
+      var bouwBlok = bouw
+        ? '<div class="panel"><h3>🏗️ Verbouwing stadion</h3>' +
+            '<div class="flexbar" style="padding:4px 0"><span>Extra plaatsen</span><span class="spacer"></span><b>+' + (bouw.addSeats || 0).toLocaleString("nl-NL") + '</b></div>' +
+            '<div class="flexbar" style="padding:4px 0"><span>Nog te gaan</span><span class="spacer"></span><span class="pill gold">' + (bouw.weeksLeft || 0) + ' wk</span></div>' +
+          '</div>'
+        : "";
+
+      m.innerHTML =
+        U.topbar("Faciliteiten", "Clubinfrastructuur — read-only overzicht") +
+        kpis +
+        '<div class="panel"><h3>🏗️ Faciliteiten (niveau 1-5)</h3>' +
+          '<div class="grid2">' + cards + '</div>' +
+        '</div>' +
+        '<div class="panel"><h3>🎓 Jeugdacademie</h3>' +
+          '<div class="grid2">' + academyCard + '</div>' +
+        '</div>' +
+        bouwBlok +
+        '<div class="panel">' +
+          '<p class="muted">Dit is een overzicht. Upgraden van faciliteiten, de academie en het stadion doe je op het <b>Directie</b>-scherm.</p>' +
+        '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_finance_charts.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".fin-track{height:22px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}" +
+    ".fin-fill{height:100%;border-radius:6px;transition:width .3s}" +
+    ".fin-row{margin:10px 0}" +
+    ".fin-lbl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}" +
+    ".fin-net{font-size:26px;font-weight:800;line-height:1}"
+  );
+
+  UI.ext.screen("ext_fin", {
+    label: "Financiën-grafiek",
+    emoji: "💹",
+    desc: "Inkomsten & uitgaven",
+    icon: '<path d="M4 20V4M4 20h16M8 16l3-4 3 3 4-6"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var f = G.finances || {};
+      var club = (G.clubs && G.clubId != null && G.clubs[G.clubId]) || {};
+
+      // Inkomsten-posten
+      var matchday = f.matchdayInc || 0;
+      var commercial = f.commercialInc || 0;
+      var transferIn = f.transferIn || 0;
+      // Uitgaven-posten
+      var wages = f.wagesPaid || 0;
+      var transferOut = f.transferOut || 0;
+
+      var income = matchday + commercial + transferIn;
+      var expenses = wages + transferOut;
+      var net = Math.round((income - expenses) * 100) / 100;
+      var budget = club.budget || 0;
+
+      // Schaal: langste balk = grootste van inkomsten/uitgaven
+      var maxBar = Math.max(income, expenses, 0.0001);
+
+      function fmt(v) { return U.fmtM(v); }
+
+      function bar(lbl, val, color) {
+        var pct = Math.max(0, Math.min(100, (val / maxBar) * 100));
+        return '<div class="fin-row">' +
+          '<div class="fin-lbl"><span>' + lbl + '</span><span class="muted">' + fmt(val) + '</span></div>' +
+          '<div class="fin-track"><div class="fin-fill" style="width:' + pct.toFixed(1) + '%;background:' + color + '"></div></div>' +
+          '</div>';
+      }
+
+      var hasData = (income !== 0 || expenses !== 0);
+
+      var html = U.topbar("Financiën-grafiek", "Inkomsten & uitgaven dit seizoen");
+
+      // KPI-strook
+      var netCls = net >= 0 ? "green" : "red";
+      html +=
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + fmt(budget) + '</div><div class="l">Huidig budget</div></div>' +
+        '<div class="kpi"><div class="v">' + fmt(income) + '</div><div class="l">Inkomsten</div></div>' +
+        '<div class="kpi"><div class="v">' + fmt(expenses) + '</div><div class="l">Uitgaven</div></div>' +
+        '</div>';
+
+      // Netto-saldo panel
+      html +=
+        '<div class="panel"><div class="flexbar">' +
+        '<div><div class="muted" style="font-size:12px">Netto-saldo dit seizoen</div>' +
+        '<div class="fin-net" style="color:var(--' + (net >= 0 ? 'accent' : 'bad') + ')">' + (net >= 0 ? '+' : '') + fmt(net) + '</div></div>' +
+        '<span class="spacer"></span>' +
+        '<span class="pill ' + netCls + '">' + (net >= 0 ? 'Winstgevend' : 'Verlieslatend') + '</span>' +
+        '</div></div>';
+
+      if (!hasData) {
+        html += '<div class="panel"><p class="muted">Nog geen financiële data dit seizoen. Speel wedstrijden en doe transfers — dan verschijnen de balken hier.</p></div>';
+        m.innerHTML = html;
+        return;
+      }
+
+      // Balken: inkomsten
+      html +=
+        '<div class="grid2">' +
+        '<div class="panel"><h3>📈 Inkomsten</h3>' +
+        bar("Wedstrijddag", matchday, "var(--accent)") +
+        bar("Commercieel / sponsor / TV", commercial, "var(--accent)") +
+        bar("Transferverkopen", transferIn, "var(--gold)") +
+        '<div class="flexbar" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">' +
+        '<b>Totaal in</b><span class="spacer"></span><b style="color:var(--accent)">' + fmt(income) + '</b></div>' +
+        '</div>';
+
+      // Balken: uitgaven
+      html +=
+        '<div class="panel"><h3>📉 Uitgaven</h3>' +
+        bar("Salarissen", wages, "var(--bad)") +
+        bar("Transferaankopen", transferOut, "var(--bad)") +
+        '<div class="flexbar" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">' +
+        '<b>Totaal uit</b><span class="spacer"></span><b style="color:var(--bad)">' + fmt(expenses) + '</b></div>' +
+        '</div>' +
+        '</div>';
+
+      // Meerjaren-historie (optioneel, uit finHistory)
+      var hist = G.finHistory || [];
+      if (hist.length) {
+        var rows = hist.map(function (h) {
+          var hn = h.net || 0;
+          return '<tr>' +
+            '<td>Seizoen ' + (h.season != null ? h.season : '?') + '</td>' +
+            '<td style="text-align:right">' + fmt(h.income || 0) + '</td>' +
+            '<td style="text-align:right">' + fmt(h.expenses || 0) + '</td>' +
+            '<td style="text-align:right;color:var(--' + (hn >= 0 ? 'accent' : 'bad') + ')">' + (hn >= 0 ? '+' : '') + fmt(hn) + '</td>' +
+            '</tr>';
+        }).join("");
+        html +=
+          '<div class="panel"><h3>Meerjaren-overzicht</h3>' +
+          '<div class="tbl-scroll"><table><thead><tr>' +
+          '<th>Seizoen</th><th style="text-align:right">In</th><th style="text-align:right">Uit</th><th style="text-align:right">Netto</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+          '<p class="muted" style="font-size:12px;margin-top:6px">Aanhoudend verlies kan leiden tot FFP-sancties (embargo of puntenaftrek).</p>' +
+          '</div>';
+      }
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_form_guide.js ==== */
+/* EXTENSIE: Vormgids — heetste & koudste spelers van je eigen selectie.
+   Zelfstandig bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".fg-meter{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;flex:0 0 90px}" +
+    ".fg-meter > i{display:block;height:100%;border-radius:5px}" +
+    ".fg-rank{width:22px;display:inline-block;text-align:center}"
+  );
+
+  // Vorm 0-100: gemiddelde van laatste 5 form-ratings (als <=10, x10) + bonus voor seizoensgoals.
+  function formVal(p) {
+    if (!p) return 50;
+    var base = 50;
+    var hist = p.formHist;
+    if (Array.isArray(hist) && hist.length) {
+      var a = hist.slice(-5);
+      var sum = 0;
+      for (var i = 0; i < a.length; i++) sum += (a[i] || 0);
+      var m = sum / a.length;
+      if (m <= 10) m *= 10;
+      base = m;
+    }
+    base += Math.min(22, (p.sGoals || 0) * 3);
+    if (base < 0) base = 0;
+    if (base > 100) base = 100;
+    return Math.round(base);
+  }
+
+  // Heeft de speler genoeg data om vorm te beoordelen?
+  function hasData(p) {
+    return p && ((Array.isArray(p.formHist) && p.formHist.length) || (p.sApps || 0) > 0);
+  }
+
+  function meterColor(v) {
+    if (v >= 68) return "var(--accent)";
+    if (v >= 50) return "var(--gold)";
+    return "var(--bad)";
+  }
+
+  UI.ext.screen("ext_form", {
+    label: "Vormgids",
+    emoji: "📈",
+    desc: "Heetste & koudste spelers",
+    icon: '<path d="M3.5 15.5 9 10l3.5 3.5L20.5 5.5"/><path d="M20.5 5.5h-4"/><path d="M20.5 5.5v4"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var players = (U.players() || []).filter(Boolean);
+      var rated = players.filter(hasData);
+
+      var row = function (p, i, hot) {
+        var v = formVal(p);
+        var emoji = hot ? "🔥" : "❄️";
+        return '<div class="flexbar" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="muted fg-rank">' + (i + 1) + '</span>' +
+          U.playerAvatar(p, 24) +
+          '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:8px;font-size:12px">' + U.posChip(p.pos) + '</span>' +
+          '<span class="spacer"></span>' +
+          '<span class="muted" style="font-size:12px;margin-right:8px">' + (p.sGoals || 0) + 'g ' + (p.sAssists || 0) + 'a</span>' +
+          '<span class="fg-meter"><i style="width:' + v + '%;background:' + meterColor(v) + '"></i></span>' +
+          '<b style="margin-left:8px;min-width:26px;text-align:right;color:' + meterColor(v) + '">' + v + '</b>' +
+          '<span style="margin-left:6px">' + emoji + '</span>' +
+          '</div>';
+      };
+
+      var head = U.topbar("Vormgids", "Heetste & koudste spelers van je selectie");
+
+      if (!rated.length) {
+        m.innerHTML = head +
+          "<div class='panel'><p class='muted'>Nog geen vorm-data. Speel eerst een paar wedstrijden dit seizoen.</p></div>";
+        return;
+      }
+
+      // Sorteer op vorm-waarde
+      var byForm = rated.slice().sort(function (a, b) { return formVal(b) - formVal(a); });
+      var hottest = byForm.slice(0, 5);
+      var coldest = byForm.slice().reverse().slice(0, 5);
+
+      // KPI's
+      var totSum = 0;
+      for (var k = 0; k < rated.length; k++) totSum += formVal(rated[k]);
+      var gemForm = Math.round(totSum / rated.length);
+      var inVorm = rated.filter(function (p) { return formVal(p) >= 68; }).length;
+      var uitVorm = rated.filter(function (p) { return formVal(p) <= 40; }).length;
+
+      m.innerHTML = head +
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + gemForm + '</div><div class="l">Gemiddelde vorm</div></div>' +
+        '<div class="kpi"><div class="v" style="color:var(--accent)">' + inVorm + '</div><div class="l">In vorm 🔥</div></div>' +
+        '<div class="kpi"><div class="v" style="color:var(--bad)">' + uitVorm + '</div><div class="l">Uit vorm ❄️</div></div>' +
+        '</div>' +
+        '<div class="grid2">' +
+        '<div class="panel"><h3>🔥 Beste vorm</h3>' +
+        hottest.map(function (p, i) { return row(p, i, true); }).join("") +
+        '</div>' +
+        '<div class="panel"><h3>❄️ Slechtste vorm</h3>' +
+        coldest.map(function (p, i) { return row(p, i, false); }).join("") +
+        '</div>' +
+        '</div>' +
+        '<p class="muted" style="margin-top:12px;font-size:12px">Vorm = gemiddelde van de laatste 5 wedstrijdcijfers, plus een bonus voor doelpunten dit seizoen.</p>';
+    }
+  });
+})();
+
+/* ==== ext/feat_goal_involvement.js ==== */
+/* EXTENSIE: Doelpuntproductie — goals & assists per speler (eigen selectie).
+   Zelfstandig bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".gi-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;flex:1;margin:0 10px;min-width:40px}" +
+    ".gi-bar i{display:block;height:100%;border-radius:5px;background:var(--accent)}"
+  );
+  UI.ext.screen("ext_gi", {
+    label: "Doelpuntproductie",
+    emoji: "⚽",
+    desc: "Goals & assists per speler",
+    icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7l3.5 2.6-1.3 4.2h-4.4L8.5 9.6 12 7z"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var players = (U.players() || []).slice();
+
+      // Betrokkenheid = goals + assists; ratio = betrokkenheid / max(1, apps)
+      var involved = players.map(function (p) {
+        var g = (p.sGoals || 0);
+        var a = (p.sAssists || 0);
+        var tot = g + a;
+        var apps = (p.sApps || 0);
+        var ratio = tot / Math.max(1, apps);
+        return { p: p, g: g, a: a, tot: tot, apps: apps, ratio: ratio };
+      });
+
+      // Alleen spelers met minstens één goal of assist voor de lijst; gesorteerd op betrokkenheid
+      var ranked = involved.filter(function (r) { return r.tot > 0; }).sort(function (a, b) {
+        if (b.tot !== a.tot) return b.tot - a.tot;
+        if (b.g !== a.g) return b.g - a.g;
+        return b.ratio - a.ratio;
+      });
+
+      var totGoals = 0, totAssists = 0;
+      involved.forEach(function (r) { totGoals += r.g; totAssists += r.a; });
+
+      // Beste ratio (minstens 3 wedstrijden zodat het zinvol is)
+      var byRatio = ranked.filter(function (r) { return r.apps >= 3; }).sort(function (a, b) { return b.ratio - a.ratio; });
+      var topRatio = byRatio.length ? byRatio[0] : (ranked.length ? ranked[0] : null);
+
+      var maxTot = ranked.length ? ranked[0].tot : 0;
+
+      var fmtR = function (n) { return (Math.round(n * 100) / 100).toFixed(2); };
+
+      var row = function (r, i) {
+        var p = r.p;
+        var w = maxTot > 0 ? Math.round((r.tot / maxTot) * 100) : 0;
+        return '<div class="flexbar" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="muted" style="width:22px;display:inline-block">' + (i + 1) + '</span>' +
+          U.playerAvatar(p, 24) +
+          '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:8px">' + U.posChip(p.pos) + '</span>' +
+          '<span class="gi-bar"><i style="width:' + w + '%"></i></span>' +
+          '<span class="muted" style="font-size:12px;margin-right:8px" title="Goals · Assists · Wedstrijden">' +
+          '⚽ ' + r.g + ' · 🅰 ' + r.a + ' · ' + r.apps + ' wed</span>' +
+          '<span class="pill green" title="Totale betrokkenheid">' + r.tot + '</span>' +
+          '<b style="margin-left:8px;min-width:38px;text-align:right" title="Betrokkenheid per wedstrijd">' + fmtR(r.ratio) + '</b>' +
+          '</div>';
+      };
+
+      var topName = topRatio ? U.lastName(topRatio.p.name) : "—";
+      var topRatioTxt = topRatio ? fmtR(topRatio.ratio) : "0.00";
+
+      m.innerHTML = U.topbar("Doelpuntproductie", "Goals, assists & betrokkenheid van jouw selectie") +
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v" style="color:var(--accent)">' + totGoals + '</div><div class="l">Goals (seizoen)</div></div>' +
+        '<div class="kpi"><div class="v" style="color:var(--gold)">' + totAssists + '</div><div class="l">Assists (seizoen)</div></div>' +
+        '<div class="kpi"><div class="v">' + (totGoals + totAssists) + '</div><div class="l">Totaal betrokken</div></div>' +
+        '</div>' +
+        '<div class="panel"><h3>🏆 Meest waardevol per wedstrijd</h3>' +
+        (topRatio
+          ? '<div class="flexbar" style="padding:6px 0;cursor:pointer" onclick="UI.playerCard(' + topRatio.p.id + ')">' +
+            U.playerAvatar(topRatio.p, 28) +
+            '<b style="margin-left:8px">' + topName + '</b>' +
+            '<span class="muted" style="margin-left:8px">' + U.posChip(topRatio.p.pos) + '</span>' +
+            '<span class="spacer"></span>' +
+            '<span class="muted" style="font-size:12px;margin-right:8px">' + topRatio.tot + ' in ' + topRatio.apps + ' wedstrijden</span>' +
+            '<span class="pill gold">' + topRatioTxt + ' per duel</span>' +
+            '</div>'
+          : "<p class='muted'>Nog geen goals of assists dit seizoen.</p>") +
+        '</div>' +
+        '<div class="panel"><h3>⚽ Ranglijst betrokkenheid</h3>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 6px">Goals + assists, met betrokkenheid per wedstrijd (totaal ÷ wedstrijden).</p>' +
+        (ranked.length ? ranked.map(row).join("") : "<p class='muted'>Nog geen data — er zijn dit seizoen nog geen goals of assists gemaakt.</p>") +
+        '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_hall_of_fame.js ==== */
+/* EXTENSIE: Hall of Fame — eregalerij met clublegendes aller tijden.
+   Zelfstandig ext-bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".hof-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}" +
+    ".hof-row:last-child{border-bottom:none}" +
+    ".hof-rank{width:26px;text-align:center;font-weight:800;color:var(--muted);font-size:15px}" +
+    ".hof-rank.g1{color:var(--gold)}.hof-rank.g2{color:#c9d2e3}.hof-rank.g3{color:#c08a4a}" +
+    ".hof-nm{font-weight:700}" +
+    ".hof-sub{font-size:11.5px;color:var(--muted)}" +
+    ".hof-stat{font-weight:800;font-size:16px;color:var(--accent)}" +
+    ".hof-fake{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.08);color:var(--muted);font-weight:700}"
+  );
+
+  UI.ext.screen("ext_hof", {
+    label: "Hall of Fame",
+    emoji: "🏛️",
+    desc: "Clublegendes aller tijden",
+    icon: '<path d="M12 3l9 5H3z"/><path d="M5 8v9M9.7 8v9M14.3 8v9M19 8v9"/><path d="M3.5 20.5h17"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var cid = G.clubId;
+      var clubName = (G.clubs && G.clubs[cid]) ? G.clubs[cid].name : "je club";
+      var legendsMap = G.legends || {};
+      var allPlayers = G.players || {};
+
+      // avatar: gebruik echte speler indien nog aanwezig, anders een nette placeholder
+      function avatar(id, name, size) {
+        size = size || 34;
+        var p = allPlayers[id];
+        if (p) return U.playerAvatar(p, size);
+        var initials = (name || "?").split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
+        return '<span class="hof-fake" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.4) + 'px">' + initials + '</span>';
+      }
+
+      function rankClass(i) { return i === 0 ? "g1" : i === 1 ? "g2" : i === 2 ? "g3" : ""; }
+
+      // ---- 1. All-time clubtopscorers uit G.legends ----
+      var legends = Object.keys(legendsMap).map(function (id) {
+        var L = legendsMap[id] || {};
+        return { id: id, name: L.name || "Onbekend", goals: (L.goals || 0), apps: (L.apps || 0) };
+      });
+      var topScorers = legends.slice()
+        .filter(function (l) { return l.goals > 0; })
+        .sort(function (a, b) { return (b.goals - a.goals) || (b.apps - a.apps); })
+        .slice(0, 10);
+      var mostApps = legends.slice()
+        .filter(function (l) { return l.apps > 0; })
+        .sort(function (a, b) { return (b.apps - a.apps) || (b.goals - a.goals); })
+        .slice(0, 5);
+
+      // ---- 2. Beste huidige spelers (hoogste ovr) ----
+      var current = U.players(cid).slice().sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); });
+      var topOvr = current.slice(0, 5);
+
+      // ---- 3. Spelers met veel Man of the Match ----
+      var topMotm = current.slice()
+        .filter(function (p) { return (p.motm || 0) > 0; })
+        .sort(function (a, b) { return (b.motm || 0) - (a.motm || 0); })
+        .slice(0, 5);
+
+      // KPI-samenvatting
+      var topScorer = topScorers[0];
+      var totalGoals = legends.reduce(function (s, l) { return s + l.goals; }, 0);
+
+      var scorerRow = function (l, i) {
+        return '<div class="hof-row" onclick="UI.playerCard(' + l.id + ')">' +
+          '<span class="hof-rank ' + rankClass(i) + '">' + (i + 1) + '</span>' +
+          avatar(l.id, l.name, 34) +
+          '<div><div class="hof-nm">' + l.name + '</div>' +
+          '<div class="hof-sub">' + l.apps + ' wedstrijden</div></div>' +
+          '<span class="spacer"></span><span class="hof-stat">' + l.goals + '</span>' +
+          '<span class="muted" style="font-size:11px;margin-left:3px">goals</span></div>';
+      };
+
+      var appsRow = function (l, i) {
+        return '<div class="hof-row" onclick="UI.playerCard(' + l.id + ')">' +
+          '<span class="hof-rank ' + rankClass(i) + '">' + (i + 1) + '</span>' +
+          avatar(l.id, l.name, 28) +
+          '<span class="hof-nm" style="margin-left:2px">' + l.name + '</span>' +
+          '<span class="spacer"></span><span class="hof-stat">' + l.apps + '</span>' +
+          '<span class="muted" style="font-size:11px;margin-left:3px">wed.</span></div>';
+      };
+
+      var ovrRow = function (p, i) {
+        return '<div class="hof-row" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="hof-rank ' + rankClass(i) + '">' + (i + 1) + '</span>' +
+          U.playerAvatar(p, 28) +
+          '<span class="hof-nm" style="margin-left:2px">' + U.lastName(p.name) + '</span>' +
+          '<span class="muted" style="margin-left:6px">' + U.posChip(p.pos) + '</span>' +
+          '<span class="spacer"></span>' + U.ovrBadge(p.ovr || 0) + '</div>';
+      };
+
+      var motmRow = function (p, i) {
+        return '<div class="hof-row" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="hof-rank ' + rankClass(i) + '">' + (i + 1) + '</span>' +
+          U.playerAvatar(p, 28) +
+          '<span class="hof-nm" style="margin-left:2px">' + U.lastName(p.name) + '</span>' +
+          '<span class="spacer"></span><span class="hof-stat">' + (p.motm || 0) + '</span>' +
+          '<span class="muted" style="font-size:11px;margin-left:3px">× MotM</span></div>';
+      };
+
+      m.innerHTML = U.topbar("Hall of Fame", "Eregalerij van " + clubName) +
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v">' + legends.length + '</div><div class="l">Vereeuwigde spelers</div></div>' +
+          '<div class="kpi"><div class="v" style="color:var(--gold)">' + (topScorer ? topScorer.goals : 0) + '</div><div class="l">Record clubtopscorer</div></div>' +
+          '<div class="kpi"><div class="v">' + totalGoals + '</div><div class="l">Goals in de annalen</div></div>' +
+        '</div>' +
+
+        '<div class="panel"><h3>⚽ Clubtopscorers aller tijden</h3>' +
+          (topScorers.length
+            ? topScorers.map(scorerRow).join("")
+            : "<p class='muted'>Nog geen doelpunten vereeuwigd. Speel wedstrijden om je eerste clublegende te schrijven.</p>") +
+        '</div>' +
+
+        '<div class="grid2">' +
+          '<div class="panel"><h3>👟 Meeste wedstrijden</h3>' +
+            (mostApps.length
+              ? mostApps.map(appsRow).join("")
+              : "<p class='muted'>Nog geen data.</p>") +
+          '</div>' +
+          '<div class="panel"><h3>🌟 Man of the Match-koningen</h3>' +
+            (topMotm.length
+              ? topMotm.map(motmRow).join("")
+              : "<p class='muted'>Nog niemand uitgeroepen tot man van de wedstrijd.</p>") +
+          '</div>' +
+        '</div>' +
+
+        '<div class="panel"><h3>💎 Sterkhouders van nu</h3>' +
+          '<div class="muted" style="font-size:11.5px;margin-bottom:4px">De hoogst gewaardeerde spelers in je huidige selectie — de legendes van morgen.</div>' +
+          (topOvr.length
+            ? topOvr.map(ovrRow).join("")
+            : "<p class='muted'>Nog geen spelers in de selectie.</p>") +
+        '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_leaders.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".led-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}" +
+    ".led-row:hover{background:rgba(255,255,255,.04)}" +
+    ".led-row:last-child{border-bottom:none}" +
+    ".led-rk{flex:0 0 26px;text-align:center;font-weight:700;color:var(--muted)}" +
+    ".led-nm{font-weight:600}" +
+    ".led-sub{font-size:12px;color:var(--muted)}" +
+    ".led-track{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}" +
+    ".led-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gold),var(--accent))}" +
+    ".led-cap{margin-left:6px}"
+  );
+
+  // Invloed = mix van leiderschap (det.leadership), ervaring (leeftijd) en kwaliteit (ovr).
+  function experience(age) {
+    // 17j -> 0, 32j+ -> 100 (ervaring loopt niet oneindig door)
+    var a = age || 20;
+    var e = ((a - 17) / (32 - 17)) * 100;
+    if (e < 0) e = 0;
+    if (e > 100) e = 100;
+    return e;
+  }
+
+  function influenceOf(p) {
+    var lead = (p.det && p.det.leadership) || 40;
+    var exp = experience(p.age || 20);
+    var ovr = p.ovr || 40;
+    // Leiderschap weegt het zwaarst, dan ervaring, dan algemene kwaliteit.
+    var v = 0.5 * lead + 0.3 * exp + 0.2 * ovr;
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    return v;
+  }
+
+  UI.ext.screen("ext_lead", {
+    label: "Kleedkamer-invloed",
+    emoji: "🧭",
+    desc: "Leiders in de groep",
+    icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7l2 5-2 5-2-5z"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var players = U.players() || [];
+
+      var html = U.topbar("Kleedkamer-invloed", "Leiders in de groep");
+
+      if (!players.length) {
+        html +=
+          '<div class="panel"><p class="muted">Nog geen selectie beschikbaar. ' +
+          'Kom later terug wanneer je kleedkamer gevuld is.</p></div>';
+        m.innerHTML = html;
+        return;
+      }
+
+      // Aanvoerder ophalen (id in tactics.captain)
+      var captainId = null;
+      var sq = (G.squads && G.clubId != null) ? G.squads[G.clubId] : null;
+      if (sq && sq.tactics && sq.tactics.captain != null) captainId = sq.tactics.captain;
+
+      // Invloed berekenen + sorteren (aflopend)
+      var ranked = players.map(function (p) {
+        return { p: p, inf: influenceOf(p) };
+      });
+      ranked.sort(function (a, b) {
+        var d = b.inf - a.inf;
+        if (d !== 0) return d;
+        return (b.p.ovr || 0) - (a.p.ovr || 0);
+      });
+
+      var top = ranked.slice(0, 8);
+      var maxInf = top[0] ? top[0].inf : 100;
+      if (maxInf <= 0) maxInf = 100;
+
+      // Aanvoerder-object opzoeken (kan buiten de top 8 vallen)
+      var captain = null;
+      if (captainId != null) {
+        for (var c = 0; c < players.length; c++) {
+          if (players[c] && players[c].id === captainId) { captain = players[c]; break; }
+        }
+      }
+
+      // KPI-strook
+      var topLeader = top[0] ? top[0].p : null;
+      var leaderCount = ranked.filter(function (r) { return (r.p.det && r.p.det.leadership || 0) >= 75; }).length;
+      html +=
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + (topLeader ? U.lastName(topLeader.name || "?") : "—") + '</div><div class="l">Grootste invloed</div></div>' +
+        '<div class="kpi"><div class="v">' + (captain ? U.lastName(captain.name || "?") : "—") + '</div><div class="l">Aanvoerder</div></div>' +
+        '<div class="kpi"><div class="v">' + leaderCount + '</div><div class="l">Sterke leiders (75+)</div></div>' +
+        '</div>';
+
+      // Lijst met invloedsbalk
+      var rows = "";
+      for (var k = 0; k < top.length; k++) {
+        var t = top[k];
+        var p = t.p;
+        var pct = Math.round((t.inf / maxInf) * 100);
+        if (pct < 4) pct = 4;
+        var lead = (p.det && p.det.leadership) || 0;
+        var isCap = (captainId != null && p.id === captainId);
+        rows +=
+          '<div class="led-row" onclick="UI.playerCard(' + p.id + ')">' +
+          '<span class="led-rk">' + (k + 1) + '</span>' +
+          U.ovrBadge(p.ovr || 0) + ' ' + U.posChip(p.pos || "?") +
+          '<div style="min-width:0;flex:1">' +
+          '<div class="led-nm">' + (p.name || "?") +
+          ' <span class="muted" style="font-weight:400;font-size:12px">' + (p.age || 0) + 'j</span>' +
+          (isCap ? '<span class="pill gold led-cap" title="Aanvoerder">© Aanvoerder</span>' : '') + '</div>' +
+          '<div class="led-track"><div class="led-fill" style="width:' + pct + '%"></div></div>' +
+          '<div class="led-sub" style="margin-top:3px">Leiderschap ' + Math.round(lead) +
+          ' · ' + (p.age || 0) + 'j ervaring · OVR ' + (p.ovr || 0) + '</div>' +
+          '</div>' +
+          '<span class="spacer"></span>' +
+          '<div style="text-align:right;flex:0 0 auto">' +
+          '<div style="font-weight:700;color:var(--gold)">' + Math.round(t.inf) + '</div>' +
+          '<div class="led-sub">invloed</div>' +
+          '</div>' +
+          '</div>';
+      }
+
+      html +=
+        '<div class="panel"><h3>Meest invloedrijke spelers</h3>' +
+        '<p class="muted" style="margin:0 0 8px">Invloed = leiderschap + ervaring (leeftijd) + kwaliteit (OVR).</p>' +
+        rows +
+        '</div>';
+
+      // Aanvoerder-notitie
+      if (captainId == null) {
+        html +=
+          '<div class="panel"><p class="muted">Er is nog geen aanvoerder aangewezen. ' +
+          'Stel er een in bij Tactiek voor extra stabiliteit in de kleedkamer.</p></div>';
+      } else if (!captain) {
+        html +=
+          '<div class="panel"><p class="muted">De aangewezen aanvoerder zit niet meer in je selectie.</p></div>';
+      }
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_loan_watch.js ==== */
+/* EXTENSIE: Huurradar — jonge spelers & speeltijd.
+   Toont talenten (<=21) uit je selectie, hoeveel ze spelen (sApps) en welke
+   veel potentie maar weinig speeltijd hebben (kandidaat voor verhuur).
+   Zelfstandig bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".lw-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;flex:1;margin:0 8px;min-width:40px}" +
+    ".lw-bar i{display:block;height:100%;border-radius:5px;background:var(--accent)}"
+  );
+  UI.ext.screen("ext_loan", {
+    label: "Huurradar",
+    emoji: "🔄",
+    desc: "Jonge spelers & speeltijd",
+    icon: '<path d="M4 8a8 8 0 0 1 14-4M20 16a8 8 0 0 1-14 4" stroke-width="2.2" fill="none"/><path d="M18 3v4h-4M6 21v-4h4" stroke-width="2.2" fill="none"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var players = (U.players() || []).filter(function (p) { return p && (p.age || 0) <= 21; });
+
+      // Meest gespeelde app-aantal onder de jongeren (voor de balk-schaal)
+      var maxApps = 1;
+      players.forEach(function (p) { if ((p.sApps || 0) > maxApps) maxApps = p.sApps || 0; });
+
+      // Potentie-marge = hoeveel een speler nog kan groeien
+      function gap(p) { return Math.max(0, (p.pot || 0) - (p.ovr || 0)); }
+
+      // Kandidaat voor verhuur: veel groei-potentie, maar weinig speeltijd
+      var loanCands = players.filter(function (p) {
+        return gap(p) >= 4 && (p.sApps || 0) <= 4;
+      }).sort(function (a, b) {
+        // meeste potentie + minste speeltijd bovenaan
+        return (gap(b) - (b.sApps || 0)) - (gap(a) - (a.sApps || 0));
+      });
+
+      // Rest van de jongeren, gesorteerd op speeltijd (meest naar minst)
+      var others = players.filter(function (p) {
+        return loanCands.indexOf(p) === -1;
+      }).sort(function (a, b) { return (b.sApps || 0) - (a.sApps || 0); });
+
+      var canLoan = typeof UI.loanOut === "function";
+
+      function playRow(p, showBtn) {
+        var apps = p.sApps || 0;
+        var pct = Math.round(apps / maxApps * 100);
+        var btn = (showBtn && canLoan)
+          ? '<button class="btn sm" style="margin-left:8px" onclick="event.stopPropagation();UI.loanOut(' + p.id + ')">Verhuur</button>'
+          : '';
+        return '<div class="flexbar" style="padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          U.playerAvatar(p, 24) +
+          '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:6px;font-size:11px">' + (p.age || 0) + 'j</span>' +
+          '<span style="margin-left:6px">' + U.posChip(p.pos) + '</span>' +
+          '<span class="lw-bar"><i style="width:' + pct + '%"></i></span>' +
+          '<span style="min-width:64px;text-align:right">' + apps + ' duels</span>' +
+          '<span class="pill gold" style="margin-left:8px" title="potentie">POT ' + U.potDisplay(p) + '</span>' +
+          btn +
+          '</div>';
+      }
+
+      var body;
+      if (!players.length) {
+        body = '<div class="panel"><p class="muted">Nog geen talenten (≤21 jaar) in je selectie.</p></div>';
+      } else {
+        body =
+          '<div class="grid3">' +
+          '<div class="kpi"><div class="v">' + players.length + '</div><div class="l">Talenten ≤21</div></div>' +
+          '<div class="kpi"><div class="v" style="color:' + (loanCands.length ? "var(--gold)" : "var(--accent)") + '">' + loanCands.length + '</div><div class="l">Verhuur-kandidaat</div></div>' +
+          '<div class="kpi"><div class="v">' + others.length + '</div><div class="l">Krijgen speeltijd</div></div>' +
+          '</div>' +
+          '<div class="panel"><h3>🔄 Kandidaat voor verhuur</h3>' +
+          '<p class="muted" style="margin-top:0">Veel potentie, weinig speeltijd — een seizoen huur geeft ervaring en groei.</p>' +
+          (loanCands.length ? loanCands.map(function (p) { return playRow(p, true); }).join("") : "<p class='muted'>Geen talenten die te weinig spelen. Mooi in balans.</p>") +
+          (loanCands.length && !canLoan ? "<p class='muted' style='font-size:11px;margin-bottom:0'>Verhuren kan via het spelerskaartje wanneer de transferwindow open is.</p>" : "") +
+          '</div>' +
+          '<div class="panel"><h3>⚽ Overige talenten</h3>' +
+          (others.length ? others.map(function (p) { return playRow(p, false); }).join("") : "<p class='muted'>Geen andere talenten.</p>") +
+          '</div>';
+      }
+
+      m.innerHTML = U.topbar("Huurradar", "Jonge spelers & speeltijd") + body;
+    }
+  });
+})();
+
+/* ==== ext/feat_manager_profile.js ==== */
+/* EXTENSIE: Manager-CV — jouw persoonlijke carrièreoverzicht als trainer.
+   Zelfstandig ext-bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".mgr-hero{display:flex;align-items:center;gap:14px}" +
+    ".mgr-ava{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;" +
+      "background:linear-gradient(135deg,var(--accent),var(--gold));color:#0b0f14;font-weight:800;font-size:22px;flex:0 0 auto}" +
+    ".mgr-nm{font-weight:800;font-size:20px;line-height:1.1}" +
+    ".mgr-sub{font-size:12px;color:var(--muted);margin-top:3px}" +
+    ".mgr-tl{position:relative;margin:4px 0 0 8px;padding-left:16px;border-left:2px solid var(--line)}" +
+    ".mgr-tl-item{position:relative;padding:7px 0}" +
+    ".mgr-tl-item:before{content:'';position:absolute;left:-21px;top:12px;width:9px;height:9px;border-radius:50%;" +
+      "background:var(--gold);box-shadow:0 0 0 3px rgba(0,0,0,.25)}" +
+    ".mgr-tl-txt{font-weight:700}" +
+    ".mgr-hbar{display:flex;flex-wrap:wrap;gap:6px}"
+  );
+
+  UI.ext.screen("ext_mgr", {
+    label: "Manager-CV",
+    emoji: "👔",
+    desc: "Jouw carrière",
+    icon: '<path d="M4 20v-1a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1"/><circle cx="12" cy="7" r="4"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var mgr = (G && G.manager) || {};
+      var career = mgr.career || {};
+
+      var played = career.played || 0;
+      var won = career.won || 0;
+      var drawn = career.drawn || 0;
+      var lost = career.lost || 0;
+      var gf = career.gf || 0;
+      var ga = career.ga || 0;
+      var honours = mgr.honours || [];
+      var motm = mgr.motm || 0;
+      var rep = mgr.reputation || 0;
+
+      var name = mgr.name || G.managerName || "Manager";
+      var age = mgr.age || 0;
+
+      // achtergrond-label (via MGR.BACKGROUNDS indien beschikbaar)
+      var bgLabel = "";
+      var BG = (window.MGR && MGR.BACKGROUNDS) || {};
+      if (mgr.background && BG[mgr.background]) bgLabel = BG[mgr.background].label;
+
+      var winPct = played ? Math.round((won / played) * 100) : 0;
+      var pts = won * 3 + drawn;
+      var ppg = played ? Math.round((pts / played) * 100) / 100 : 0;
+      var goalDiff = gf - ga;
+
+      // tenure / seizoenen
+      var since = mgr.sinceSeason || 1;
+      var seizoenen = Math.max(1, (G.season || since) - since + 1);
+
+      // avatar-initialen
+      var initials = String(name).split(" ").map(function (w) { return w.charAt(0); })
+        .join("").slice(0, 2).toUpperCase() || "M";
+
+      // reputatie-woord
+      var repWord = rep >= 85 ? "Wereldtop" : rep >= 70 ? "Gerenommeerd" :
+        rep >= 55 ? "Gevestigd" : rep >= 40 ? "In opkomst" : "Beginnend";
+
+      var repPill = rep >= 70 ? "gold" : rep >= 45 ? "green" : "";
+      var winPill = winPct >= 55 ? "green" : winPct >= 40 ? "gold" : "red";
+
+      // --- HERO-blok ---
+      var hero =
+        '<div class="panel"><div class="mgr-hero">' +
+          '<div class="mgr-ava">' + initials + '</div>' +
+          '<div>' +
+            '<div class="mgr-nm">' + name + '</div>' +
+            '<div class="mgr-sub">' +
+              (age ? age + ' jaar' : '') +
+              (bgLabel ? (age ? ' · ' : '') + bgLabel : '') +
+              ' · <span class="pill ' + repPill + '">' + repWord + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<span class="spacer"></span>' +
+          '<div style="text-align:right">' +
+            '<div style="font-weight:800;font-size:22px;color:var(--gold)">' + rep + '</div>' +
+            '<div class="mgr-sub" style="margin-top:0">Reputatie</div>' +
+          '</div>' +
+        '</div></div>';
+
+      // --- KPI-tegels ---
+      var kpis =
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v"><span class="pill ' + winPill + '" style="font-size:15px">' + winPct + '%</span></div><div class="l">Winstpercentage</div></div>' +
+          '<div class="kpi"><div class="v">' + played + '</div><div class="l">Duels als trainer</div></div>' +
+          '<div class="kpi"><div class="v" style="color:var(--gold)">' + honours.length + '</div><div class="l">Prijzen gewonnen</div></div>' +
+        '</div>';
+
+      // --- Balans (W/G/V + doelsaldo) ---
+      var balans =
+        '<div class="panel"><h3>📊 Carrièrebalans</h3>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Gespeeld</span><span class="spacer"></span><strong>' + played + '</strong></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Gewonnen</span><span class="spacer"></span><span class="pill green">' + won + '</span></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Gelijk</span><span class="spacer"></span><span class="pill">' + drawn + '</span></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Verloren</span><span class="spacer"></span><span class="pill red">' + lost + '</span></div>' +
+          '<div class="flexbar" style="padding:5px 0;border-top:1px solid var(--line);margin-top:4px"><span class="muted">Doelpunten voor/tegen</span><span class="spacer"></span><strong>' + gf + ' : ' + ga + '</strong></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Doelsaldo</span><span class="spacer"></span><span class="pill ' + (goalDiff > 0 ? 'green' : goalDiff < 0 ? 'red' : '') + '">' + (goalDiff > 0 ? '+' : '') + goalDiff + '</span></div>' +
+        '</div>';
+
+      // --- Extra stats-blok ---
+      var extra =
+        '<div class="panel"><h3>🎖️ Kengetallen</h3>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Punten per duel</span><span class="spacer"></span><strong>' + ppg + '</strong></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Actieve seizoenen</span><span class="spacer"></span><strong>' + seizoenen + '</strong></div>' +
+          '<div class="flexbar" style="padding:5px 0"><span class="muted">Manager van de Maand</span><span class="spacer"></span><span class="pill ' + (motm > 0 ? 'gold' : '') + '">' + motm + '×</span></div>' +
+        '</div>';
+
+      // --- Erelijst als tijdlijn ---
+      var honoursBlock;
+      if (honours.length) {
+        honoursBlock =
+          '<div class="panel"><h3>🏆 Erelijst (' + honours.length + ')</h3>' +
+            '<div class="mgr-hbar" style="margin-bottom:10px">' +
+              honours.map(function (h) { return '<span class="pill gold">🏅 ' + h + '</span>'; }).join("") +
+            '</div>' +
+            '<div class="mgr-tl">' +
+              honours.slice().reverse().map(function (h) {
+                return '<div class="mgr-tl-item"><div class="mgr-tl-txt">' + h + '</div></div>';
+              }).join("") +
+            '</div>' +
+          '</div>';
+      } else {
+        honoursBlock =
+          '<div class="panel"><h3>🏆 Erelijst</h3>' +
+            "<p class='muted'>Nog geen prijzen gewonnen. Word kampioen of win een beker om je erelijst te openen.</p>" +
+          '</div>';
+      }
+
+      m.innerHTML =
+        U.topbar("Manager-CV", "De carrière van " + U.lastName(name)) +
+        hero +
+        kpis +
+        '<div class="grid2">' + balans + extra + '</div>' +
+        honoursBlock;
+    }
+  });
+})();
+
+/* ==== ext/feat_market_values.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".mval-rank{display:inline-block;min-width:22px;text-align:center;font-weight:700;color:var(--muted)}" +
+    ".mval-rank.top{color:var(--gold)}" +
+    ".mval-val{font-weight:700;color:var(--accent)}"
+  );
+
+  UI.ext.screen("ext_mval", {
+    label: "Marktwaarden",
+    emoji: "💎",
+    desc: "Duurste spelers",
+    icon: '<path d="M6 3.5h12l3.5 5-9.5 12L2.5 8.5z"/><path d="M2.5 8.5h19"/><path d="M8.5 8.5 12 20.5 15.5 8.5"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var clubs = G.clubs || {};
+      var squads = G.squads || {};
+      var myId = G.clubId;
+      var myClub = clubs[myId] || {};
+      var div = myClub.div;
+      var myLeague = myClub.league || "ned";
+
+      // --- Verzamel spelers uit alle clubs in jouw divisie -----------------
+      var all = [];
+      var clubCount = 0;
+      for (var cid in clubs) {
+        if (!clubs.hasOwnProperty(cid)) continue;
+        var c = clubs[cid] || {};
+        if (c.div !== div) continue;
+        if ((c.league || "ned") !== myLeague) continue;
+        var sq = squads[cid];
+        if (!sq) continue; // G.squads[c] moet bestaan
+        clubCount++;
+        var players = U.players(cid) || [];
+        for (var i = 0; i < players.length; i++) {
+          var p = players[i];
+          if (!p) continue;
+          all.push({ p: p, cid: cid });
+        }
+      }
+
+      all.sort(function (a, b) { return (b.p.value || 0) - (a.p.value || 0); });
+
+      var topN = all.slice(0, 12);
+      var totalVal = 0;
+      for (var t = 0; t < all.length; t++) totalVal += (all[t].p.value || 0);
+      var topVal = topN.length ? (topN[0].p.value || 0) : 0;
+
+      // --- Jouw 5 duurste spelers -----------------------------------------
+      var mine = (U.players(myId) || []).slice().sort(function (a, b) {
+        return (b.value || 0) - (a.value || 0);
+      }).slice(0, 5);
+
+      // --- Rijen top-12 ----------------------------------------------------
+      function divRow(item, idx) {
+        var p = item.p;
+        var isMine = item.cid == myId;
+        return '<tr style="cursor:pointer' + (isMine ? ';background:rgba(255,255,255,.04)' : '') + '" onclick="UI.playerCard(' + p.id + ')">' +
+          '<td><span class="mval-rank' + (idx < 3 ? ' top' : '') + '">' + (idx + 1) + '</span></td>' +
+          '<td>' + U.playerAvatar(p, 26) + ' <b>' + U.lastName(p.name || "") + '</b></td>' +
+          '<td>' + U.ovrMini(p.ovr || 0) + '</td>' +
+          '<td>' + U.posChip(p.pos || "") + '</td>' +
+          '<td>' + U.clubBadge(item.cid, 18) + ' <span class="muted" style="font-size:12px">' + ((clubs[item.cid] || {}).short || (clubs[item.cid] || {}).name || "") + '</span></td>' +
+          '<td class="tbl-num mval-val">' + U.fmtM(p.value || 0) + '</td>' +
+          '</tr>';
+      }
+
+      function mineRow(p) {
+        return '<div class="flexbar" style="padding:6px 0;cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          U.playerAvatar(p, 28) +
+          '<span style="margin-left:8px"><b>' + U.lastName(p.name || "") + '</b> <span class="muted" style="font-size:12px">' + U.posChip(p.pos || "") + '</span></span>' +
+          '<span class="spacer"></span>' +
+          '<span class="pill gold">' + U.fmtM(p.value || 0) + '</span>' +
+          '</div>';
+      }
+
+      var html = U.topbar("Marktwaarden", "Duurste spelers in " + (div ? "divisie " + div : "jouw divisie"));
+
+      // KPI-strook
+      html += '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + clubCount + '</div><div class="l">Clubs in divisie</div></div>' +
+        '<div class="kpi"><div class="v">' + U.fmtM(totalVal) + '</div><div class="l">Totale waarde</div></div>' +
+        '<div class="kpi"><div class="v">' + U.fmtM(topVal) + '</div><div class="l">Duurste speler</div></div>' +
+        '</div>';
+
+      // Top 12 divisiebreed
+      html += '<div class="panel"><h3>💎 Top 12 duurste spelers</h3>';
+      if (topN.length) {
+        html += '<div class="tbl-scroll"><table><thead><tr>' +
+          '<th>#</th><th>Speler</th><th>OVR</th><th>Pos</th><th>Club</th><th class="tbl-num">Waarde</th>' +
+          '</tr></thead><tbody>' +
+          topN.map(function (it, i) { return divRow(it, i); }).join("") +
+          '</tbody></table></div>';
+      } else {
+        html += "<p class='muted'>Nog geen data.</p>";
+      }
+      html += '</div>';
+
+      // Jouw 5 duurste
+      html += '<div class="panel"><h3>Jouw 5 duurste spelers</h3>';
+      if (mine.length) {
+        html += mine.map(mineRow).join("");
+      } else {
+        html += "<p class='muted'>Nog geen data.</p>";
+      }
+      html += '</div>';
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_medical.js ==== */
+/* EXTENSIE: Medisch centrum — referentie-implementatie + sjabloon voor andere ext-features.
+   Elk js/ext/*.js bestand is zelfstandig, draait NA ui.js, en registreert zich via window.UI.ext.
+   Gebruik UI.ext.util voor consistente helpers (topbar, lastName, playerAvatar, clubBadge, fmtM, ...). */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".med-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;flex:1;margin:0 8px}" +
+    ".med-bar i{display:block;height:100%;border-radius:5px}"
+  );
+  UI.ext.screen("ext_medical", {
+    label: "Medisch centrum",
+    emoji: "🏥",
+    desc: "Blessures, herstel & conditie",
+    icon: '<path d="M12 4v16M4 12h16" stroke-width="2.4"/><rect x="3.5" y="3.5" width="17" height="17" rx="3"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var players = U.players();
+      var injured = players.filter(function (p) { return p.injuredWeeks > 0; }).sort(function (a, b) { return b.injuredWeeks - a.injuredWeeks; });
+      var low = players.filter(function (p) { return p.injuredWeeks <= 0 && p.fitness < 72; }).sort(function (a, b) { return a.fitness - b.fitness; });
+      var susp = players.filter(function (p) { return (p.suspended || 0) > 0; });
+      var injRow = function (p) {
+        return '<div class="flexbar" style="padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          U.playerAvatar(p, 24) + '<b style="margin-left:8px">' + U.lastName(p.name) + '</b>' +
+          '<span class="muted" style="margin-left:6px">' + (G.clubs[p.club] ? U.posChip(p.pos) : "") + '</span>' +
+          '<span class="spacer"></span><span class="pill red">' + p.injuredWeeks + ' wk</span></div>';
+      };
+      var fitRow = function (p) {
+        var c = p.fitness >= 60 ? "var(--gold)" : "var(--bad)";
+        return '<div class="flexbar" style="padding:5px 0;cursor:pointer" onclick="UI.playerCard(' + p.id + ')"><span>' + U.lastName(p.name) + '</span>' +
+          '<span class="med-bar"><i style="width:' + p.fitness + '%;background:' + c + '"></i></span><b>' + p.fitness + '%</b></div>';
+      };
+      m.innerHTML = U.topbar("Medisch centrum", "Blessures, herstel & conditie") +
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v" style="color:' + (injured.length ? "var(--bad)" : "var(--accent)") + '">' + injured.length + '</div><div class="l">Geblesseerd</div></div>' +
+        '<div class="kpi"><div class="v">' + low.length + '</div><div class="l">Lage conditie</div></div>' +
+        '<div class="kpi"><div class="v">' + susp.length + '</div><div class="l">Geschorst</div></div>' +
+        '</div>' +
+        '<div class="panel"><h3>🚑 Op de behandeltafel</h3>' + (injured.length ? injured.map(injRow).join("") : "<p class='muted'>Geen blessures — de medische staf heeft rust.</p>") + '</div>' +
+        '<div class="panel"><h3>😓 Verhoogd risico (lage conditie)</h3>' + (low.length ? low.map(fitRow).join("") : "<p class='muted'>Iedereen is voldoende fit.</p>") + '</div>' +
+        (susp.length ? '<div class="panel"><h3>⛔ Schorsingen</h3>' + susp.map(function (p) { return '<div class="flexbar" style="padding:5px 0"><span>' + U.lastName(p.name) + '</span><span class="spacer"></span><span class="pill red">' + p.suspended + ' duel</span></div>'; }).join("") + '</div>' : "");
+    }
+  });
+})();
+
+/* ==== ext/feat_objectives.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".obj-bar{height:12px;border-radius:7px;background:rgba(255,255,255,.08);overflow:hidden}" +
+    ".obj-bar>span{display:block;height:100%;border-radius:7px}" +
+    ".obj-big{font-size:30px;font-weight:800;line-height:1}" +
+    ".obj-vs{font-size:18px;font-weight:700;color:var(--muted);padding:0 6px}"
+  );
+
+  UI.ext.screen("ext_obj", {
+    label: "Bestuursdoelen",
+    emoji: "🎯",
+    desc: "Doelstelling & vertrouwen",
+    icon: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var obj = G.objective || {};
+      var clubs = G.clubs || {};
+      var club = clubs[G.clubId] || {};
+
+      // Huidige competitiepositie bepalen
+      var pos = null, aantal = null;
+      try {
+        var div = club.div;
+        var table = (G.tables || {})[div];
+        if (table && window.ENGINE && ENGINE.sortedTable) {
+          var sorted = ENGINE.sortedTable(table) || [];
+          aantal = sorted.length;
+          for (var i = 0; i < sorted.length; i++) {
+            if (sorted[i] && sorted[i].id === G.clubId) { pos = i + 1; break; }
+          }
+        }
+      } catch (e) { pos = null; }
+
+      var target = (obj.target != null) ? obj.target : null;
+      var objText = obj.text || "een goed seizoen";
+
+      // Status: op koers of onder druk
+      var opKoers = (pos != null && target != null) ? (pos <= target) : null;
+      var statusPill = "";
+      if (opKoers === true) statusPill = '<span class="pill green">Op koers</span>';
+      else if (opKoers === false) statusPill = '<span class="pill red">Onder druk</span>';
+      else statusPill = '<span class="pill">Nog geen stand</span>';
+
+      // Vertrouwen (bestuur)
+      var job = (G.jobSecurity != null) ? Math.round(G.jobSecurity) : null;
+      // fanSat bestaat als fanMood in deze game (supportersstemming)
+      var fanRaw = (G.fanSat != null) ? G.fanSat : (G.fanMood != null ? G.fanMood : null);
+      var fan = (fanRaw != null) ? Math.round(fanRaw) : null;
+
+      function barColor(v) {
+        if (v == null) return "var(--muted)";
+        if (v >= 66) return "var(--accent)";
+        if (v >= 40) return "var(--gold)";
+        return "var(--bad)";
+      }
+      function bar(v) {
+        var w = (v != null) ? Math.max(0, Math.min(100, v)) : 0;
+        return '<div class="obj-bar"><span style="width:' + w + '%;background:' + barColor(v) + '"></span></div>';
+      }
+      function jobLabel(v) {
+        if (v == null) return "onbekend";
+        if (v >= 75) return "Zeer veilig — het bestuur heeft volste vertrouwen";
+        if (v >= 55) return "Solide — het bestuur is tevreden";
+        if (v >= 35) return "Onder de loep — het bestuur kijkt kritisch mee";
+        if (v >= 18) return "Wankel — de positie staat onder druk";
+        return "Kritiek — ontslag dreigt bij tegenvallende resultaten";
+      }
+      function fanLabel(v) {
+        if (v == null) return "onbekend";
+        if (v >= 70) return "Uitgelaten";
+        if (v >= 55) return "Tevreden";
+        if (v >= 40) return "Wisselvallig";
+        if (v >= 25) return "Onrustig";
+        return "Woedend";
+      }
+
+      var html = U.topbar("Bestuursdoelen", "Doelstelling & vertrouwen");
+
+      // Doelstelling-paneel
+      html += '<div class="panel">' +
+        '<div class="flexbar"><h3 style="margin:0">Seizoensdoelstelling</h3><span class="spacer"></span>' + statusPill + '</div>' +
+        '<p class="muted" style="margin:6px 0 14px">Het bestuur verwacht dit seizoen: <strong style="color:var(--txt)">' + objText + '</strong>.</p>' +
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v obj-big">' + (pos != null ? pos + 'e' : '—') + '</div><div class="l">Huidige positie' + (aantal ? ' / ' + aantal : '') + '</div></div>' +
+          '<div class="kpi"><div class="v obj-big">' + (target != null ? 'top ' + target : '—') + '</div><div class="l">Doel-positie</div></div>' +
+          '<div class="kpi"><div class="v">' + (opKoers === true ? '✅' : opKoers === false ? '⚠️' : '—') + '</div><div class="l">' + (opKoers === true ? 'Op schema' : opKoers === false ? 'Achterstand op doel' : 'In afwachting') + '</div></div>' +
+        '</div>';
+      if (pos != null && target != null && opKoers === false) {
+        var gap = pos - target;
+        html += '<p class="muted" style="margin:12px 0 0">Je staat <strong style="color:var(--bad)">' + gap + ' plek' + (gap === 1 ? '' : 'ken') + '</strong> onder de doelstelling (top ' + target + '). Punten pakken is nu belangrijk voor het vertrouwen van het bestuur.</p>';
+      } else if (pos != null && target != null) {
+        html += '<p class="muted" style="margin:12px 0 0">Mooi — je zit op of boven de doelstelling. Zo doorgaan houdt het bestuur tevreden.</p>';
+      } else {
+        html += '<p class="muted" style="margin:12px 0 0">Zodra de competitie loopt verschijnt hier je stand ten opzichte van het doel.</p>';
+      }
+      html += '</div>';
+
+      // Vertrouwen-paneel
+      html += '<div class="grid2">';
+
+      html += '<div class="panel">' +
+        '<div class="flexbar"><h3 style="margin:0">Bestuursvertrouwen</h3><span class="spacer"></span><span class="pill ' + (job != null && job >= 55 ? 'green' : job != null && job >= 35 ? 'gold' : 'red') + '">' + (job != null ? job + '/100' : 'n.v.t.') + '</span></div>' +
+        '<div style="margin:12px 0 8px">' + bar(job) + '</div>' +
+        '<p class="muted" style="margin:0">' + jobLabel(job) + '.</p>' +
+      '</div>';
+
+      html += '<div class="panel">' +
+        '<div class="flexbar"><h3 style="margin:0">Supportersstemming</h3><span class="spacer"></span><span class="pill ' + (fan != null && fan >= 55 ? 'green' : fan != null && fan >= 40 ? 'gold' : 'red') + '">' + (fan != null ? fanLabel(fan) : 'n.v.t.') + '</span></div>' +
+        '<div style="margin:12px 0 8px">' + bar(fan) + '</div>' +
+        '<p class="muted" style="margin:0">' + (fan != null ? 'De fans zijn ' + fanLabel(fan).toLowerCase() + ' (' + fan + '/100). Winst en aantrekkelijk spel tillen de sfeer op.' : 'Nog geen meting van de supportersstemming.') + '</p>' +
+      '</div>';
+
+      html += '</div>';
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_power_ranking.js ==== */
+/* EXTENSIE: Power ranking — machtsverhoudingen in jouw divisie.
+   Combineert huidige positie (E.sortedTable), clubsterkte (strength) en recente vorm
+   (laatste 5 duels uit G.results) tot één machtsscore en rangschikt daarop. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  var E = window.ENGINE;
+
+  UI.ext.css(
+    ".pw-you{background:rgba(46,204,113,.10)}" +
+    ".pw-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;flex:1;margin:0 10px;min-width:60px}" +
+    ".pw-bar i{display:block;height:100%;border-radius:6px;background:var(--gold)}" +
+    ".pw-badge{font-weight:800;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap}" +
+    ".pw-form span{display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;" +
+      "font-size:10px;font-weight:800;border-radius:3px;margin-right:2px;color:#0b0f14}" +
+    ".pw-form .w{background:var(--accent)}.pw-form .d{background:var(--muted)}.pw-form .l{background:var(--bad)}"
+  );
+
+  UI.ext.screen("ext_power", {
+    label: "Power ranking",
+    emoji: "⚡",
+    desc: "Machtsverhoudingen",
+    icon: '<path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/>',
+    render: function (m, GAME) {
+      var G = (GAME && GAME.getState && GAME.getState()) || {};
+      var clubs = G.clubs || {};
+      var meId = G.clubId;
+      var div = (clubs[meId] || {}).div;
+      var table = ((G.tables || {})[div]) || null;
+
+      if (!table || !E || typeof E.sortedTable !== "function") {
+        m.innerHTML = U.topbar("Power ranking", "Machtsverhoudingen") +
+          "<div class='panel'><p class='muted'>Nog geen competitiedata beschikbaar.</p></div>";
+        return;
+      }
+
+      var rows = E.sortedTable(table) || [];
+      var n = rows.length;
+      if (n < 2) {
+        m.innerHTML = U.topbar("Power ranking", "Machtsverhoudingen") +
+          "<div class='panel'><p class='muted'>Nog geen data om te ranken.</p></div>";
+        return;
+      }
+
+      // Huidige positie per club (1 = koploper)
+      var curPos = {};
+      rows.forEach(function (r, i) { curPos[r.id] = i + 1; });
+
+      // Recente vorm: laatste 5 duels per club uit G.results[div]
+      var results = ((G.results || {})[div]) || [];
+      function recentForm(cid) {
+        var mine = results.filter(function (r) {
+          return r && (r.home === cid || r.away === cid);
+        }).slice(-5);
+        var pts = 0, seq = [];
+        mine.forEach(function (r) {
+          var isHome = r.home === cid;
+          var gf = isHome ? (r.hg || 0) : (r.ag || 0);
+          var ga = isHome ? (r.ag || 0) : (r.hg || 0);
+          if (gf > ga) { pts += 3; seq.push("W"); }
+          else if (gf < ga) { seq.push("L"); }
+          else { pts += 1; seq.push("D"); }
+        });
+        // vorm-index 0..1 (gemiddeld punten per duel / 3); bij geen duels: neutraal 0.5
+        var idx = mine.length ? (pts / (mine.length * 3)) : 0.5;
+        return { idx: idx, seq: seq, games: mine.length, pts: pts };
+      }
+
+      // Sterkte-bereik binnen de divisie (voor normalisatie 0..1)
+      var minS = Infinity, maxS = -Infinity;
+      rows.forEach(function (r) {
+        var s = ((clubs[r.id] || {}).strength) || 60;
+        if (s < minS) minS = s;
+        if (s > maxS) maxS = s;
+      });
+      var span = (maxS - minS) || 1;
+
+      // Machtsscore = 50% positie + 30% sterkte + 20% vorm  -> 0..100
+      var items = rows.map(function (r) {
+        var c = clubs[r.id] || {};
+        var s = c.strength || 60;
+        var pos = curPos[r.id] || n;
+        var posScore = n > 1 ? (n - pos) / (n - 1) : 1;   // 1 = koploper, 0 = hekkensluiter
+        var strScore = (s - minS) / span;                  // 0..1
+        var form = recentForm(r.id);
+        var raw = 0.50 * posScore + 0.30 * strScore + 0.20 * form.idx;
+        return {
+          id: r.id,
+          name: c.name || r.id,
+          strength: s,
+          pos: pos,
+          pts: r.Pts || 0,
+          gd: (r.GF || 0) - (r.GA || 0),
+          form: form,
+          power: Math.round(raw * 100)
+        };
+      });
+
+      // Rangschik op machtsscore (dan doelsaldo, dan punten)
+      items.sort(function (a, b) {
+        return (b.power - a.power) || (b.gd - a.gd) || (b.pts - a.pts);
+      });
+
+      var maxPower = Math.max.apply(null, items.map(function (p) { return p.power; })) || 1;
+
+      // Sterkte-badge o.b.v. machtsscore
+      function badge(power) {
+        if (power >= 75) return "<span class='pw-badge pill gold'>Grootmacht</span>";
+        if (power >= 58) return "<span class='pw-badge pill green'>Sterk</span>";
+        if (power >= 40) return "<span class='pw-badge'>Middenmoot</span>";
+        if (power >= 25) return "<span class='pw-badge' style='color:var(--muted)'>Kwetsbaar</span>";
+        return "<span class='pw-badge pill red'>Zwak</span>";
+      }
+
+      function formHtml(seq) {
+        if (!seq.length) return "<span class='muted' style='font-size:11px'>—</span>";
+        return "<span class='pw-form'>" + seq.map(function (r) {
+          var cl = r === "W" ? "w" : r === "D" ? "d" : "l";
+          return "<span class='" + cl + "'>" + r + "</span>";
+        }).join("") + "</span>";
+      }
+
+      // --- KPI's voor jouw club ---
+      var me = items.filter(function (p) { return p.id === meId; })[0];
+      var mePowerPos = items.findIndex(function (p) { return p.id === meId; }) + 1;
+      var top = items[0];
+
+      var kpis =
+        "<div class='grid3'>" +
+        "<div class='kpi'><div class='v'>" + (mePowerPos || "—") + "e</div><div class='l'>Jouw machtspositie</div></div>" +
+        "<div class='kpi'><div class='v' style='color:var(--gold)'>" + (me ? me.power : "—") + "</div><div class='l'>Jouw machtsscore</div></div>" +
+        "<div class='kpi'><div class='v' style='font-size:16px'>" + (top ? top.name : "—") + "</div><div class='l'>Sterkste macht</div></div>" +
+        "</div>";
+
+      // --- Ranglijst ---
+      var rowsHtml = items.map(function (p, i) {
+        var rank = i + 1;
+        var isMe = p.id === meId;
+        var w = Math.max(4, Math.round((p.power / maxPower) * 100));
+        return "<div class='flexbar " + (isMe ? "pw-you" : "") + "' style='padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer' onclick=\"UI.nav && UI.nav('ext_power')\">" +
+          "<b style='width:22px;text-align:center'>" + rank + "</b>" +
+          U.clubBadge(p.id, 22) +
+          "<b style='margin-left:8px;min-width:120px" + (isMe ? ";color:var(--accent)" : "") + "'>" + p.name + "</b>" +
+          formHtml(p.form.seq) +
+          "<span class='pw-bar'><i style='width:" + w + "%'></i></span>" +
+          "<b style='min-width:34px;text-align:right'>" + p.power + "</b>" +
+          "<span style='margin-left:10px'>" + badge(p.power) + "</span>" +
+          "</div>";
+      }).join("");
+
+      var listBlock =
+        "<div class='panel'><h3>⚡ Machtsverhoudingen</h3>" +
+        rowsHtml +
+        "<p class='muted' style='margin-top:8px'>Machtsscore = 50% huidige positie + 30% clubsterkte + 20% recente vorm (laatste 5 duels)." +
+        (top ? " Sterkste macht: <b>" + top.name + "</b>." : "") + "</p>" +
+        "</div>";
+
+      m.innerHTML = U.topbar("Power ranking", "Machtsverhoudingen in jouw divisie") +
+        kpis + listBlock;
+    }
+  });
+})();
+
+/* ==== ext/feat_predictions.js ==== */
+/* EXTENSIE: Voorspelling — voorspeld eindklassement + titelkansen voor jouw divisie.
+   Blend van de huidige stand (punten/gespeeld) met de clubsterkte voor de resterende duels. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  var E = window.ENGINE;
+  UI.ext.css(
+    ".pred-you{background:rgba(46,204,113,.10)}" +
+    ".pred-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;flex:1;margin:0 10px;min-width:60px}" +
+    ".pred-bar i{display:block;height:100%;border-radius:6px;background:var(--gold)}" +
+    ".pred-mv{font-size:12px;font-weight:700;width:34px;display:inline-block;text-align:right}"
+  );
+
+  UI.ext.screen("ext_pred", {
+    label: "Voorspelling",
+    emoji: "🔮",
+    desc: "Eindklassement & titelkansen",
+    icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" stroke-width="2"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState() || {};
+      var clubs = G.clubs || {};
+      var meId = G.clubId;
+      var div = (clubs[meId] || {}).div;
+      var table = ((G.tables || {})[div]) || null;
+
+      if (!table || !E || typeof E.sortedTable !== "function") {
+        m.innerHTML = U.topbar("Voorspelling", "Eindklassement & titelkansen") +
+          "<div class='panel'><p class='muted'>Nog geen competitiedata beschikbaar.</p></div>";
+        return;
+      }
+
+      var rows = E.sortedTable(table) || [];
+      var n = rows.length;
+      if (n < 2) {
+        m.innerHTML = U.topbar("Voorspelling", "Eindklassement & titelkansen") +
+          "<div class='panel'><p class='muted'>Nog geen data om te voorspellen.</p></div>";
+        return;
+      }
+
+      var totalGames = (n - 1) * 2;               // elke club speelt iedereen thuis + uit
+
+      // Sterkte-bereik binnen deze divisie (voor een verwacht puntengemiddelde per club)
+      var minS = Infinity, maxS = -Infinity;
+      rows.forEach(function (r) {
+        var s = ((clubs[r.id] || {}).strength) || 60;
+        if (s < minS) minS = s;
+        if (s > maxS) maxS = s;
+      });
+      var span = (maxS - minS) || 1;
+
+      // Bouw per club de projectie
+      var proj = rows.map(function (r) {
+        var c = clubs[r.id] || {};
+        var s = c.strength || 60;
+        var played = r.P || 0;
+        var pts = r.Pts || 0;
+        var remaining = Math.max(0, totalGames - played);
+
+        // verwacht puntengemiddelde puur op sterkte: sterkste ~2.2, zwakste ~0.8 ppg
+        var frac = (s - minS) / span;             // 0..1
+        var strengthPPG = 0.8 + frac * 1.4;
+        // actueel puntengemiddelde (betrouwbaarder naarmate er meer gespeeld is)
+        var actualPPG = played > 0 ? pts / played : strengthPPG;
+        var w = totalGames > 0 ? Math.min(1, played / totalGames) : 0;
+        var blendPPG = w * actualPPG + (1 - w) * strengthPPG;
+
+        var projPts = Math.round(pts + blendPPG * remaining);
+
+        return {
+          id: r.id, name: c.name || r.id, short: c.short || r.id,
+          strength: s, played: played, pts: pts, remaining: remaining,
+          gd: (r.GF || 0) - (r.GA || 0), projPts: projPts
+        };
+      });
+
+      // Huidige positie onthouden (index in rows = huidige stand)
+      var curPos = {};
+      rows.forEach(function (r, i) { curPos[r.id] = i + 1; });
+
+      // Voorspelde eindstand: op projectie, dan doelsaldo, dan huidige punten
+      var predicted = proj.slice().sort(function (a, b) {
+        return (b.projPts - a.projPts) || (b.gd - a.gd) || (b.pts - a.pts);
+      });
+
+      // Titelkansen op basis van sterkte-aandeel (gescherpt), genudged door de projectie
+      var TITLE_POW = 6;
+      var weights = {}, wSum = 0;
+      predicted.forEach(function (p) {
+        var wgt = Math.pow(Math.max(1, p.strength), TITLE_POW) *
+                  Math.pow(Math.max(1, p.projPts), 1.2);
+        weights[p.id] = wgt;
+        wSum += wgt;
+      });
+      var titlePct = function (id) { return wSum > 0 ? (weights[id] / wSum) * 100 : 0; };
+
+      var maxProj = Math.max.apply(null, predicted.map(function (p) { return p.projPts; })) || 1;
+
+      // --- KPI's ---
+      var mePred = predicted.filter(function (p) { return p.id === meId; })[0];
+      var mePredPos = predicted.findIndex(function (p) { return p.id === meId; }) + 1;
+      var meCurPos = curPos[meId] || mePredPos;
+      var champ = predicted[0];
+
+      var kpis =
+        "<div class='grid3'>" +
+        "<div class='kpi'><div class='v'>" + (mePredPos || "—") + "e</div><div class='l'>Jouw voorspelde eindstand</div></div>" +
+        "<div class='kpi'><div class='v'>" + (mePred ? mePred.projPts : "—") + "</div><div class='l'>Verwachte eindpunten</div></div>" +
+        "<div class='kpi'><div class='v' style='color:var(--gold)'>" + (mePred ? titlePct(meId).toFixed(0) + "%" : "—") + "</div><div class='l'>Jouw titelkans</div></div>" +
+        "</div>";
+
+      // --- Titelkansen top 4 ---
+      var top4 = predicted.slice(0, Math.min(4, predicted.length));
+      var titleBlock =
+        "<div class='panel'><h3>🏆 Titelkansen (top 4)</h3>" +
+        top4.map(function (p) {
+          var pct = titlePct(p.id);
+          var isMe = p.id === meId;
+          return "<div class='flexbar' style='padding:7px 0;border-bottom:1px solid var(--line);cursor:default'>" +
+            U.clubBadge(p.id, 22) +
+            "<b style='margin-left:8px" + (isMe ? ";color:var(--accent)" : "") + "'>" + p.name + "</b>" +
+            "<span class='pred-bar'><i style='width:" + Math.max(3, Math.min(100, pct)) + "%'></i></span>" +
+            "<b class='" + (pct >= 40 ? "pill gold" : "") + "' style='min-width:44px;text-align:right'>" + pct.toFixed(0) + "%</b>" +
+            "</div>";
+        }).join("") +
+        "</div>";
+
+      // --- Voorspeld eindklassement ---
+      var rowsHtml = predicted.map(function (p, i) {
+        var pos = i + 1;
+        var cur = curPos[p.id] || pos;
+        var delta = cur - pos;               // >0 = stijgt t.o.v. nu
+        var mv = delta > 0 ? "<span class='pred-mv' style='color:var(--accent)'>▲" + delta + "</span>"
+               : delta < 0 ? "<span class='pred-mv' style='color:var(--bad)'>▼" + (-delta) + "</span>"
+               : "<span class='pred-mv muted'>–</span>";
+        var isMe = p.id === meId;
+        return "<tr class='" + (isMe ? "pred-you" : "") + "' style='cursor:default'>" +
+          "<td style='text-align:center;font-weight:700'>" + pos + "</td>" +
+          "<td>" + U.clubBadge(p.id, 20) + "<span style='margin-left:7px" + (isMe ? ";font-weight:700;color:var(--accent)" : "") + "'>" + p.name + "</span></td>" +
+          "<td style='text-align:center' class='muted'>" + p.played + "</td>" +
+          "<td style='text-align:center'>" + p.pts + "</td>" +
+          "<td style='text-align:center;font-weight:700'>" + p.projPts + "</td>" +
+          "<td style='text-align:center'>" + mv + "</td>" +
+          "</tr>";
+      }).join("");
+
+      var tableBlock =
+        "<div class='panel'><h3>📊 Voorspeld eindklassement</h3>" +
+        "<div class='tbl-scroll'><table>" +
+        "<thead><tr>" +
+        "<th style='text-align:center'>#</th><th>Club</th>" +
+        "<th style='text-align:center'>Gesp.</th><th style='text-align:center'>Nu</th>" +
+        "<th style='text-align:center'>Eind</th><th style='text-align:center'>Δ</th>" +
+        "</tr></thead><tbody>" + rowsHtml + "</tbody></table></div>" +
+        "<p class='muted' style='margin-top:8px'>Verwachting = huidige punten + resterende duels ingeschat op clubsterkte" +
+        (mePred && champ ? ". Voorspeld kampioen: <b>" + champ.name + "</b>." : ".") + "</p>" +
+        "</div>";
+
+      m.innerHTML = U.topbar("Voorspelling", "Eindklassement & titelkansen") +
+        kpis + titleBlock + tableBlock;
+    }
+  });
+})();
+
+/* ==== ext/feat_results_archive.js ==== */
+/* EXTENSIE: Resultaten — jouw competitieresultaten dit seizoen.
+   Zelfstandig ext-bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+  UI.ext.css(
+    ".res-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);cursor:default}" +
+    ".res-wk{width:34px;flex:none;color:var(--muted);font-size:12px}" +
+    ".res-opp{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".res-ha{width:34px;flex:none;text-align:center;color:var(--muted);font-size:11px}" +
+    ".res-sc{width:56px;flex:none;text-align:center;font-weight:700}" +
+    ".res-badge{width:26px;flex:none;text-align:center;font-weight:700;border-radius:6px;padding:2px 0}" +
+    ".res-badge.w{background:rgba(22,229,143,.16);color:var(--accent)}" +
+    ".res-badge.g{background:rgba(212,170,60,.16);color:var(--gold)}" +
+    ".res-badge.v{background:rgba(233,84,84,.16);color:var(--bad)}"
+  );
+
+  UI.ext.screen("ext_results", {
+    label: "Resultaten",
+    emoji: "📋",
+    desc: "Jouw resultaten dit seizoen",
+    icon: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5" stroke-width="1.8"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var clubs = G.clubs || {};
+      var me = G.clubId;
+      var myClub = clubs[me] || {};
+      var div = myClub.div;
+
+      var all = (G.results && G.results[div]) || [];
+      var mine = all.filter(function (r) {
+        return r && (r.home === me || r.away === me);
+      });
+
+      if (!mine.length) {
+        m.innerHTML = U.topbar("Resultaten", "Jouw resultaten dit seizoen") +
+          "<div class='panel'><p class='muted'>Nog geen competitieduels gespeeld dit seizoen.</p></div>";
+        return;
+      }
+
+      var w = 0, g = 0, v = 0, gf = 0, ga = 0;
+      var rows = mine.map(function (r) {
+        var home = r.home === me;
+        var oppId = home ? r.away : r.home;
+        var opp = clubs[oppId] || {};
+        var myGoals = home ? (r.hg || 0) : (r.ag || 0);
+        var oppGoals = home ? (r.ag || 0) : (r.hg || 0);
+        gf += myGoals; ga += oppGoals;
+
+        var cls, tag;
+        if (myGoals > oppGoals) { cls = "w"; tag = "W"; w++; }
+        else if (myGoals < oppGoals) { cls = "v"; tag = "V"; v++; }
+        else { cls = "g"; tag = "G"; g++; }
+
+        var oppName = opp.name || "Onbekend";
+        return '<div class="res-row">' +
+          '<span class="res-wk">' + (r.week != null ? "wk " + r.week : "") + '</span>' +
+          '<span class="res-ha">' + (home ? "thuis" : "uit") + '</span>' +
+          '<span class="res-opp">' + oppName + '</span>' +
+          '<span class="res-sc">' + myGoals + " – " + oppGoals + '</span>' +
+          '<span class="res-badge ' + cls + '">' + tag + '</span>' +
+        '</div>';
+      }).join("");
+
+      var speeld = mine.length;
+      var punten = w * 3 + g;
+      var saldo = gf - ga;
+
+      m.innerHTML = U.topbar("Resultaten", "Jouw resultaten dit seizoen — " + (myClub.name || "")) +
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v" style="color:var(--accent)">' + w + '</div><div class="l">Gewonnen</div></div>' +
+          '<div class="kpi"><div class="v" style="color:var(--gold)">' + g + '</div><div class="l">Gelijk</div></div>' +
+          '<div class="kpi"><div class="v" style="color:var(--bad)">' + v + '</div><div class="l">Verloren</div></div>' +
+        '</div>' +
+        '<div class="grid3" style="margin-top:6px">' +
+          '<div class="kpi"><div class="v">' + gf + '</div><div class="l">Doelpunten voor</div></div>' +
+          '<div class="kpi"><div class="v">' + ga + '</div><div class="l">Doelpunten tegen</div></div>' +
+          '<div class="kpi"><div class="v">' + (saldo > 0 ? "+" + saldo : saldo) + '</div><div class="l">Saldo</div></div>' +
+        '</div>' +
+        '<div class="flexbar" style="margin-top:6px">' +
+          '<span class="muted">' + speeld + ' duels gespeeld</span>' +
+          '<span class="spacer"></span>' +
+          '<span class="pill green">' + punten + ' punten</span>' +
+        '</div>' +
+        '<div class="panel" style="margin-top:10px"><h3>📋 Alle duels</h3>' + rows + '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_rivalries.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".riv-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}" +
+    ".riv-bar>i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gold),var(--bad))}" +
+    ".riv-card{padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px}" +
+    ".riv-head{display:flex;align-items:center;gap:10px;cursor:pointer}" +
+    ".riv-nm{font-weight:700}" +
+    ".riv-bal b{color:var(--txt)}"
+  );
+
+  UI.ext.screen("ext_rivals", {
+    label: "Rivalen",
+    emoji: "🔥",
+    desc: "Jouw rivaliteiten",
+    icon: '<path d="M12 3c1.5 3 4 4 4 7a4 4 0 0 1-8 0c0-1 .4-2 1-3-.2 2 1 3 1 3s2-2 2-4c0-2-.5-3 0-4z"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var rivs = (G && G.rivalries) || {};
+      var clubs = (G && G.clubs) || {};
+
+      var list = Object.keys(rivs)
+        .filter(function (id) { return clubs[id]; })
+        .map(function (id) {
+          var r = rivs[id] || {};
+          return {
+            id: id,
+            w: r.w || 0,
+            d: r.d || 0,
+            l: r.l || 0,
+            intensity: Math.max(0, Math.min(100, Math.round(r.intensity || 0))),
+            derby: !!r.derby,
+            lastScore: r.lastScore || null
+          };
+        });
+
+      list.sort(function (a, b) { return b.intensity - a.intensity; });
+
+      var html = U.topbar("Rivalen", "Jouw rivaliteiten");
+
+      if (!list.length) {
+        html += '<div class="panel"><p class="muted">Nog geen rivaliteiten. Deze ontstaan vanzelf als je stadsderby\'s speelt of om de titel strijdt met een andere topclub.</p></div>';
+        m.innerHTML = html;
+        return;
+      }
+
+      // KPI-samenvatting
+      var totW = 0, totD = 0, totL = 0, derbies = 0;
+      list.forEach(function (r) { totW += r.w; totD += r.d; totL += r.l; if (r.derby) derbies++; });
+
+      html += '<div class="panel"><div class="grid3">' +
+        '<div class="kpi"><div class="v">' + list.length + '</div><div class="l">Rivalen</div></div>' +
+        '<div class="kpi"><div class="v">' + totW + '-' + totD + '-' + totL + '</div><div class="l">Totale balans (W-G-V)</div></div>' +
+        '<div class="kpi"><div class="v">' + derbies + '</div><div class="l">Derby\'s</div></div>' +
+        '</div></div>';
+
+      html += '<div class="panel"><h3>Rivaliteiten (op intensiteit)</h3>';
+
+      html += list.map(function (r) {
+        var name = clubs[r.id].name || clubs[r.id].short || "Onbekend";
+        var tot = r.w + r.d + r.l;
+        var derbyPill = r.derby ? ' <span class="pill red">🔥 Derby</span>' : '';
+        var lastLine = r.lastScore ? '<span class="muted" style="font-size:12px">laatste duel ' + r.lastScore + '</span>' : '<span class="muted" style="font-size:12px">nog geen uitslag</span>';
+
+        return '<div class="riv-card">' +
+          '<div class="riv-head" onclick="UI.nav && UI.nav(\'ext_rivals\')">' +
+            (U.clubBadge ? U.clubBadge(r.id, 32) : '') +
+            '<span class="riv-nm">' + name + '</span>' + derbyPill +
+            '<span class="spacer"></span>' +
+            '<span class="pill gold">' + r.intensity + '/100</span>' +
+          '</div>' +
+          '<div class="riv-bar"><i style="width:' + r.intensity + '%"></i></div>' +
+          '<div class="flexbar" style="margin-top:8px">' +
+            '<span class="riv-bal">Balans: <b>' + r.w + '</b>-' + r.d + '-<b>' + r.l + '</b> <span class="muted">(' + tot + ' ' + (tot === 1 ? 'duel' : 'duels') + ')</span></span>' +
+            '<span class="spacer"></span>' + lastLine +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      html += '</div>';
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_squad_planner.js ==== */
+/* EXTENSIE: Selectieplanner — leeftijdspiramide, positiediepte, gemiddelde leeftijd & selectiewaarde.
+   Zelfstandig js/ext/*.js bestand, draait NA ui.js, registreert zich via window.UI.ext. */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".sp-bar{height:20px;border-radius:5px;background:var(--accent);min-width:2px;transition:width .3s}" +
+    ".sp-track{flex:1;height:20px;border-radius:5px;background:rgba(255,255,255,.06);margin:0 10px;overflow:hidden}" +
+    ".sp-pos{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}" +
+    ".sp-pos:last-child{border-bottom:0}" +
+    ".sp-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}"
+  );
+
+  // Vaste positie-volgorde + Nederlandse labels (spiegelt D.POSITIONS in data.js).
+  var POS_DEFS = [
+    { code: "GK", label: "Keeper" },
+    { code: "DC", label: "Centrale verdediger" },
+    { code: "DL", label: "Linksback" },
+    { code: "DR", label: "Rechtsback" },
+    { code: "DM", label: "Verdedigende mid" },
+    { code: "CM", label: "Middenvelder" },
+    { code: "AM", label: "Aanvallende mid" },
+    { code: "LW", label: "Linksbuiten" },
+    { code: "RW", label: "Rechtsbuiten" },
+    { code: "ST", label: "Spits" }
+  ];
+
+  var AGE_GROUPS = [
+    { key: "16-19", min: 0, max: 19, tint: "var(--accent)" },
+    { key: "20-23", min: 20, max: 23, tint: "var(--accent)" },
+    { key: "24-27", min: 24, max: 27, tint: "var(--gold)" },
+    { key: "28-31", min: 28, max: 31, tint: "var(--gold)" },
+    { key: "32+", min: 32, max: 999, tint: "var(--bad)" }
+  ];
+
+  UI.ext.screen("ext_plan", {
+    label: "Selectieplanner",
+    emoji: "🧩",
+    desc: "Leeftijd & positiediepte",
+    icon: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" stroke-width="2"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var players = (U.players() || []).filter(Boolean);
+
+      if (!players.length) {
+        m.innerHTML = U.topbar("Selectieplanner", "Leeftijd & positiediepte") +
+          "<div class='panel'><p class='muted'>Nog geen selectie beschikbaar.</p></div>";
+        return;
+      }
+
+      var n = players.length;
+
+      // --- Gemiddelde leeftijd & totale waarde ---
+      var totAge = 0, totValue = 0, ageCount = 0;
+      players.forEach(function (p) {
+        var a = (p.age || 0);
+        if (a > 0) { totAge += a; ageCount++; }
+        totValue += (p.value || 0);
+      });
+      var avgAge = ageCount ? (totAge / ageCount) : 0;
+
+      // --- Leeftijdspiramide ---
+      var buckets = AGE_GROUPS.map(function (g) {
+        var list = players.filter(function (p) {
+          var a = (p.age || 0);
+          return a >= g.min && a <= g.max;
+        });
+        return { g: g, list: list };
+      });
+      var maxBucket = buckets.reduce(function (mx, b) { return Math.max(mx, b.list.length); }, 0) || 1;
+
+      var pyramidRows = buckets.map(function (b) {
+        var cnt = b.list.length;
+        var pct = Math.round((cnt / maxBucket) * 100);
+        var totV = b.list.reduce(function (s, p) { return s + (p.value || 0); }, 0);
+        return '<div class="flexbar" style="padding:6px 0">' +
+          '<b style="width:56px;display:inline-block">' + b.g.key + '</b>' +
+          '<span class="sp-track"><span class="sp-bar" style="width:' + pct + '%;background:' + b.g.tint + ';display:block"></span></span>' +
+          '<b style="width:26px;text-align:right">' + cnt + '</b>' +
+          '<span class="muted" style="width:74px;text-align:right">' + U.fmtM(totV) + '</span>' +
+          '</div>';
+      }).join("");
+
+      // --- Positiediepte ---
+      var posRows = POS_DEFS.map(function (d) {
+        var list = players.filter(function (p) { return p.pos === d.code; });
+        var cnt = list.length;
+        var thin = cnt < 2;
+        var dotCol = thin ? "var(--bad)" : (cnt >= 3 ? "var(--accent)" : "var(--gold)");
+        var namesHtml = cnt
+          ? list.sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); }).map(function (p) {
+              return '<span class="muted" style="cursor:pointer;margin-right:8px" onclick="UI.playerCard(' + p.id + ')">' +
+                U.lastName(p.name || "") + '</span>';
+            }).join("")
+          : '<span class="muted">geen</span>';
+        return '<div class="sp-pos">' +
+          '<span class="sp-dot" style="background:' + dotCol + '"></span>' +
+          U.posChip(d.code) +
+          '<span style="margin-left:8px;min-width:130px">' + d.label + '</span>' +
+          '<span class="spacer"></span>' +
+          '<span style="min-width:200px;text-align:right;font-size:12px">' + namesHtml + '</span>' +
+          '<b style="width:30px;text-align:right">' + cnt + '</b>' +
+          (thin ? '<span class="pill red" style="margin-left:8px">dun bezet</span>'
+                : '<span class="pill green" style="margin-left:8px">ok</span>') +
+          '</div>';
+      }).join("");
+
+      var thinCount = POS_DEFS.filter(function (d) {
+        return players.filter(function (p) { return p.pos === d.code; }).length < 2;
+      }).length;
+
+      m.innerHTML = U.topbar("Selectieplanner", "Leeftijd & positiediepte") +
+        '<div class="grid3">' +
+          '<div class="kpi"><div class="v">' + n + '</div><div class="l">Spelers in selectie</div></div>' +
+          '<div class="kpi"><div class="v">' + (avgAge ? avgAge.toFixed(1) : "—") + '</div><div class="l">Gem. leeftijd</div></div>' +
+          '<div class="kpi"><div class="v">' + U.fmtM(totValue) + '</div><div class="l">Totale selectiewaarde</div></div>' +
+        '</div>' +
+        '<div class="panel"><h3>📊 Leeftijdspiramide</h3>' +
+          '<div class="flexbar muted" style="padding:2px 0;font-size:12px"><span style="width:56px">Leeftijd</span><span class="spacer"></span><span style="width:26px;text-align:right">#</span><span style="width:74px;text-align:right">Waarde</span></div>' +
+          pyramidRows +
+        '</div>' +
+        '<div class="panel"><h3>🧭 Positiediepte' +
+          (thinCount ? ' <span class="pill red" style="margin-left:6px">' + thinCount + ' dun bezet</span>' : '') +
+          '</h3>' +
+          '<p class="muted" style="margin:0 0 6px">Een positie is “dun bezet” bij minder dan 2 spelers.</p>' +
+          posRows +
+        '</div>';
+    }
+  });
+})();
+
+/* ==== ext/feat_top_talents.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".tal-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}" +
+    ".tal-row:hover{background:rgba(255,255,255,.04)}" +
+    ".tal-row:last-child{border-bottom:none}" +
+    ".tal-rk{flex:0 0 26px;text-align:center;font-weight:700;color:var(--muted)}" +
+    ".tal-nm{font-weight:600}" +
+    ".tal-sub{font-size:12px;color:var(--muted)}" +
+    ".tal-grow{font-weight:700;color:var(--accent)}"
+  );
+
+  UI.ext.screen("ext_talents", {
+    label: "Toptalenten",
+    emoji: "🌱",
+    desc: "Beste jonge spelers",
+    icon: '<path d="M12 21c0-5 0-8 4-11"/><path d="M16 6c-4 0-7 2-7 6 3 0 6-2 7-6z"/><path d="M12 21c0-4-2-7-6-8 0 4 2 7 6 8z"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var clubs = G.clubs || {};
+      var squads = G.squads || {};
+      var myClub = (G.clubId != null && clubs[G.clubId]) || {};
+      var myDiv = myClub.div;
+
+      // Verzamel alle spelers <= 21 jaar uit clubs in dezelfde divisie
+      var talents = [];
+      for (var cid in squads) {
+        if (!squads.hasOwnProperty(cid)) continue;
+        var club = clubs[cid];
+        if (!club) continue;                       // club moet bestaan (voor badge)
+        if (myDiv != null && club.div !== myDiv) continue; // divisiebreed = eigen divisie
+        var sq = squads[cid] || {};
+        var pmap = sq.players || {};
+        for (var pid in pmap) {
+          if (!pmap.hasOwnProperty(pid)) continue;
+          var p = pmap[pid];
+          if (!p) continue;
+          if ((p.age || 0) <= 21) talents.push(p);
+        }
+      }
+
+      // Sorteer op potentie (aflopend), daarna op ovr
+      talents.sort(function (a, b) {
+        var d = (b.pot || 0) - (a.pot || 0);
+        if (d !== 0) return d;
+        return (b.ovr || 0) - (a.ovr || 0);
+      });
+
+      var top = talents.slice(0, 12);
+
+      var html = U.topbar("Toptalenten", "Beste jonge spelers (t/m 21 jaar) in jouw divisie");
+
+      if (!talents.length) {
+        html +=
+          '<div class="panel"><p class="muted">Nog geen jonge talenten gevonden in deze divisie. ' +
+          'Kom later terug wanneer de selecties gevuld zijn.</p></div>';
+        m.innerHTML = html;
+        return;
+      }
+
+      // KPI-strook
+      var best = top[0] || {};
+      var bestGrow = Math.max(0, (best.pot || 0) - (best.ovr || 0));
+      html +=
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + talents.length + '</div><div class="l">Talenten (t/m 21j)</div></div>' +
+        '<div class="kpi"><div class="v">' + (best.pot || 0) + '</div><div class="l">Hoogste potentie</div></div>' +
+        '<div class="kpi"><div class="v">+' + bestGrow + '</div><div class="l">Grootste groeimarge</div></div>' +
+        '</div>';
+
+      // Lijst
+      var rows = "";
+      for (var k = 0; k < top.length; k++) {
+        var t = top[k];
+        var cid2 = t.club;
+        var club2 = (cid2 != null && clubs[cid2]) ? clubs[cid2] : null;
+        var clubName = club2 ? club2.name : "Onbekende club";
+        var badge = club2 ? U.clubBadge(cid2, 22) : "";
+        var grow = Math.max(0, (t.pot || 0) - (t.ovr || 0));
+        rows +=
+          '<div class="tal-row" onclick="UI.playerCard(' + t.id + ')">' +
+          '<span class="tal-rk">' + (k + 1) + '</span>' +
+          U.ovrBadge(t.ovr || 0) + ' ' + U.posChip(t.pos || "?") +
+          '<div style="min-width:0">' +
+          '<div class="tal-nm">' + (t.name || "?") +
+          ' <span class="muted" style="font-weight:400;font-size:12px">' + (t.age || 0) + 'j</span></div>' +
+          '<div class="tal-sub">' + badge + ' <span style="vertical-align:middle;margin-left:4px">' + clubName + '</span></div>' +
+          '</div>' +
+          '<span class="spacer"></span>' +
+          '<div style="text-align:right">' +
+          '<div><span class="pill gold" title="potentie">POT ' + (t.pot || 0) + '</span></div>' +
+          '<div class="tal-grow" style="margin-top:4px" title="groeimarge (potentie - huidig)">+' + grow + ' groei</div>' +
+          '</div>' +
+          '</div>';
+      }
+
+      html +=
+        '<div class="panel"><h3>Top ' + top.length + ' talenten</h3>' +
+        rows +
+        '</div>';
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_transfer_targets.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".tt-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}" +
+    ".tt-row:hover{background:rgba(255,255,255,.04)}" +
+    ".tt-row:last-child{border-bottom:none}" +
+    ".tt-nm{font-weight:600}" +
+    ".tt-sub{font-size:12px;color:var(--muted)}"
+  );
+
+  UI.ext.screen("ext_targets", {
+    label: "Transferdoelen",
+    emoji: "🎯",
+    desc: "Jouw shortlist",
+    icon: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var scouting = G.scouting || {};
+      var ids = scouting.shortlist || [];
+      var players = G.players || {};
+      var clubs = G.clubs || {};
+      var myClub = (G.clubId != null && clubs[G.clubId]) || {};
+      var budget = myClub.budget || 0;
+
+      // Verzamel geldige doelwitten
+      var targets = [];
+      for (var i = 0; i < ids.length; i++) {
+        var p = players[ids[i]];
+        if (p) targets.push(p);
+      }
+      targets.sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); });
+
+      var html = U.topbar("Transferdoelen", "Jouw shortlist");
+
+      // KPI-strook
+      var affordable = 0;
+      for (var j = 0; j < targets.length; j++) {
+        if ((targets[j].value || 0) <= budget) affordable++;
+      }
+      html +=
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + targets.length + '</div><div class="l">Op shortlist</div></div>' +
+        '<div class="kpi"><div class="v">' + U.fmtM(budget) + '</div><div class="l">Budget</div></div>' +
+        '<div class="kpi"><div class="v">' + affordable + '</div><div class="l">Binnen budget</div></div>' +
+        '</div>';
+
+      if (!targets.length) {
+        html +=
+          '<div class="panel"><p class="muted">Nog niemand op je shortlist. ' +
+          'Tik op ☆ bij een speler op de transfermarkt of bij het scouten om hem hier te volgen.</p></div>';
+        m.innerHTML = html;
+        return;
+      }
+
+      // Lijst met doelwitten
+      var rows = "";
+      for (var k = 0; k < targets.length; k++) {
+        var t = targets[k];
+        var val = t.value || 0;
+        var fits = val <= budget;
+        var clubName = (t.club != null && clubs[t.club]) ? clubs[t.club].name : "Onbekende club";
+        var pos = t.pos || "?";
+        var pill = fits
+          ? '<span class="pill green">Past in budget</span>'
+          : '<span class="pill red">Te duur</span>';
+        rows +=
+          '<div class="tt-row" onclick="UI.playerCard(' + t.id + ')">' +
+          U.ovrBadge(t.ovr || 0) + ' ' + U.posChip(pos) +
+          '<div style="min-width:0">' +
+          '<div class="tt-nm">' + (t.name || "?") + '</div>' +
+          '<div class="tt-sub">' + clubName + '</div>' +
+          '</div>' +
+          '<span class="spacer"></span>' +
+          '<div style="text-align:right">' +
+          '<div style="font-weight:600">' + U.fmtM(val) + '</div>' +
+          '<div style="margin-top:3px">' + pill + '</div>' +
+          '</div>' +
+          '</div>';
+      }
+
+      html +=
+        '<div class="panel"><h3>Doelwitten (' + targets.length + ')</h3>' +
+        rows +
+        '</div>';
+
+      m.innerHTML = html;
+    }
+  });
+})();
+
+/* ==== ext/feat_wage_structure.js ==== */
+(function () {
+  if (!window.UI || !UI.ext) return;
+  var U = UI.ext.util;
+
+  UI.ext.css(
+    ".ws-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px}" +
+    ".ws-fill{height:100%;border-radius:5px}" +
+    ".ws-row{padding:7px 0;border-bottom:1px solid var(--line)}" +
+    ".ws-row:last-child{border-bottom:none}" +
+    ".ws-num{font-variant-numeric:tabular-nums}"
+  );
+
+  function eur(v) { return "€" + (Math.round((v || 0) * 10) / 10).toFixed(1) + "k"; }
+
+  UI.ext.screen("ext_wage", {
+    label: "Loonstructuur",
+    emoji: "💶",
+    desc: "Salarissen & budget",
+    icon: '<path d="M3 6h18v12H3zM3 10h18M7 14h4"/>',
+    render: function (m, GAME) {
+      var G = GAME.getState();
+      var players = (U.players() || []).filter(Boolean);
+
+      var html = U.topbar("Loonstructuur", "Salarissen & loonbudget van je selectie");
+
+      if (!players.length) {
+        html += "<div class='panel'><p class='muted'>Nog geen selectie beschikbaar.</p></div>";
+        m.innerHTML = html;
+        return;
+      }
+
+      // ---- Totalen ----
+      var totalK = 0;
+      for (var i = 0; i < players.length; i++) totalK += (players[i].wage || 0);
+      var totalM = totalK / 1000;                     // weekloonsom in €M
+      var avgK = totalK / players.length;             // gemiddeld weekloon in EUR k
+      var wageBudget = G.wageBudget || 0;             // loonbudget €M/wk
+      var pctBudget = wageBudget > 0 ? Math.min(100, (totalM / wageBudget) * 100) : 0;
+      var overBudget = wageBudget > 0 && totalM > wageBudget;
+
+      // ---- KPI-strook ----
+      html +=
+        '<div class="grid3">' +
+        '<div class="kpi"><div class="v">' + U.fmtM(totalM) + '</div><div class="l">Weekloonsom</div></div>' +
+        '<div class="kpi"><div class="v">' + eur(avgK) + '</div><div class="l">Gemiddeld weekloon</div></div>' +
+        '<div class="kpi"><div class="v">' + players.length + '</div><div class="l">Spelers in selectie</div></div>' +
+        '</div>';
+
+      // ---- Loonbudget-benutting ----
+      if (wageBudget > 0) {
+        var barCol = overBudget ? "var(--bad)" : (pctBudget > 85 ? "var(--gold)" : "var(--accent)");
+        html +=
+          '<div class="panel"><div class="flexbar" style="font-size:13px;margin-bottom:2px">' +
+          '<span>Loonbudget-benutting</span><span class="spacer"></span>' +
+          '<span class="muted ws-num">' + U.fmtM(totalM) + ' / ' + U.fmtM(wageBudget) + ' p/wk</span></div>' +
+          '<div class="ws-bar"><div class="ws-fill" style="width:' + pctBudget.toFixed(1) + '%;background:' + barCol + '"></div></div>' +
+          '<div class="flexbar" style="margin-top:8px">' +
+          '<span class="muted" style="font-size:12px">Ruimte t.o.v. budget</span><span class="spacer"></span>' +
+          '<span class="pill ' + (overBudget ? 'red' : 'green') + '">' +
+          (overBudget ? 'Over budget (' + U.fmtM(totalM - wageBudget) + ')' : U.fmtM(wageBudget - totalM) + ' vrij') +
+          '</span></div></div>';
+      }
+
+      // ---- Top-verdieners ----
+      var top = players.slice().sort(function (a, b) { return (b.wage || 0) - (a.wage || 0); });
+      var maxWage = (top[0] && top[0].wage) || 1;
+      var topN = top.slice(0, 10);
+
+      html += '<div class="panel"><h3>Top-verdieners</h3>';
+      html += topN.map(function (p) {
+        var w = p.wage || 0;
+        var pct = Math.max(3, Math.min(100, (w / maxWage) * 100));
+        var share = totalK > 0 ? (w / totalK) * 100 : 0;
+        return '<div class="ws-row" style="cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+          '<div class="flexbar">' +
+          '<span>' + U.ovrMini(p.ovr) + ' ' + U.posChip(p.pos) + ' <b>' + U.lastName(p.name) + '</b></span>' +
+          '<span class="spacer"></span>' +
+          '<span class="ws-num" style="font-weight:700">' + eur(w) + '</span>' +
+          '<span class="muted ws-num" style="font-size:11px;margin-left:8px;min-width:44px;text-align:right">' + share.toFixed(1) + '%</span>' +
+          '</div>' +
+          '<div class="ws-bar"><div class="ws-fill" style="width:' + pct.toFixed(1) + '%;background:var(--gold)"></div></div>' +
+          '</div>';
+      }).join("");
+      html += '</div>';
+
+      // ---- Loon vs OVR: relatief te duur ----
+      // Maatstaf: weekloon per OVR-punt. Hoog = veel salaris voor weinig kwaliteit.
+      var ranked = players.filter(function (p) { return (p.wage || 0) > 0 && (p.ovr || 0) > 0; })
+        .map(function (p) { return { p: p, ratio: (p.wage || 0) / (p.ovr || 1) }; })
+        .sort(function (a, b) { return b.ratio - a.ratio; });
+
+      html += '<div class="panel"><h3>Loon vs kwaliteit</h3>' +
+        '<p class="muted" style="font-size:12px;margin-top:0">Hoog salaris, relatief lage OVR &mdash; wie kost het meest per kwaliteitspunt.</p>';
+
+      if (!ranked.length) {
+        html += "<p class='muted'>Nog geen salarisdata.</p>";
+      } else {
+        html += '<div class="tbl-scroll"><table><thead><tr>' +
+          '<th>Speler</th><th class="ws-num" style="text-align:right">OVR</th>' +
+          '<th class="ws-num" style="text-align:right">Loon</th>' +
+          '<th class="ws-num" style="text-align:right">€k / OVR-punt</th>' +
+          '</tr></thead><tbody>';
+        html += ranked.slice(0, 8).map(function (r) {
+          var p = r.p;
+          return '<tr style="cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
+            '<td>' + U.posChip(p.pos) + ' ' + U.lastName(p.name) + '</td>' +
+            '<td class="ws-num" style="text-align:right">' + U.ovrMini(p.ovr) + '</td>' +
+            '<td class="ws-num" style="text-align:right">' + eur(p.wage) + '</td>' +
+            '<td class="ws-num" style="text-align:right;color:var(--bad)">' + r.ratio.toFixed(2) + '</td>' +
+            '</tr>';
+        }).join("");
+        html += '</tbody></table></div>';
+      }
+      html += '</div>';
+
+      m.innerHTML = html;
+    }
+  });
+})();
 
 </script>
 <script>if(document.readyState!=="loading"){try{window.UI&&UI.init&&UI.init()}catch(e){}}</script>
