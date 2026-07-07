@@ -369,6 +369,29 @@ tbody tr:last-child td{border-bottom:none}
 .tr-line+.tr-line{border-top:1px solid rgba(255,255,255,.05)}
 .cmt.act{color:var(--accent,#16e58f);font-weight:600}
 .cmt.flavor{opacity:.72;font-size:12px}
+/* spelerkaart-verdieping */
+.prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:520px){.prof-grid{grid-template-columns:1fr}}
+.prof-box{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+.role-suit{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px}
+.role-suit span:first-child{flex:0 0 130px}
+.rs-bar{flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.rs-bar i{display:block;height:100%;border-radius:4px}
+.role-suit b{flex:0 0 26px;text-align:right}
+.dev-box{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+.dev-curve{width:100%;height:68px;display:block;margin-top:4px}
+.at-cell{font-variant-numeric:tabular-nums}
+/* analyse / data-hub */
+.an-line{display:flex;align-items:center;gap:10px;padding:5px 0}
+.an-line-lbl{flex:0 0 130px;font-size:13px}
+.an-line-bar{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.an-line-bar i{display:block;height:100%;border-radius:5px}
+.an-line b{flex:0 0 28px;text-align:right;font-variant-numeric:tabular-nums}
+.an-agebar{height:14px;border-radius:5px;background:rgba(255,255,255,.06);position:relative;overflow:hidden}
+.an-agebar i{display:block;height:100%;border-radius:5px}
+.an-agebar span{position:absolute;right:6px;top:-1px;font-size:10px;font-weight:700}
+.an-posrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px;flex-wrap:wrap}
+.an-pos{flex:0 0 auto;display:flex;align-items:center;gap:4px}
 .momentum{height:8px;background:var(--bad);border-radius:5px;overflow:hidden}
 .momentum > i{display:block;height:100%;width:50%;background:var(--accent);transition:width .3s}
 /* ---------- effecten ---------- */
@@ -7673,7 +7696,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     finances: '<circle cx="12" cy="12" r="8.5"/><path d="M15.4 9.3A4 4 0 1 0 15.4 14.7"/><path d="M8.2 11h5M8.2 13h4.2"/>',
     inbox: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3.2 6.6l8.8 6.4 8.8-6.4"/>',
     fans: '<circle cx="6.5" cy="9" r="2.1"/><circle cx="17.5" cy="9" r="2.1"/><circle cx="12" cy="7.4" r="2.5"/><path d="M2.6 18.5c0-2.3 1.7-4 3.9-4M21.4 18.5c0-2.3-1.7-4-3.9-4M7 18.5c0-2.9 2-5 5-5s5 2.1 5 5"/>',
-    settings: '<path d="M5 8.5h14M5 15.5h14"/><circle cx="10" cy="8.5" r="2.3"/><circle cx="14" cy="15.5" r="2.3"/>'
+    settings: '<path d="M5 8.5h14M5 15.5h14"/><circle cx="10" cy="8.5" r="2.3"/><circle cx="14" cy="15.5" r="2.3"/>',
+    analyse: '<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="2.6" height="5.5"/><rect x="11.7" y="8.5" width="2.6" height="9"/><rect x="16.4" y="5.5" width="2.6" height="12"/>'
   };
   function icon(name, size) { size = size || 20; return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" style="display:block">${ICONS[name] || ICONS.dashboard}</svg>`; }
   function clubBadge(cid, size) {
@@ -7808,7 +7832,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const unread = G.inbox.filter(i => !i.read).length;
     const nav = [
       ["dashboard", "🏠", "Dashboard"], ["match", "⚽", "Wedstrijd"], ["squad", "👥", "Opstelling"],
-      ["kleedkamer", "🤝", "Kleedkamer"], ["tactics", "📋", "Tactiek"], ["transfers", "💱", "Transfers"], ["scouting", "🔍", "Scouting"], ["jeugd", "🎓", "Jeugd"],
+      ["kleedkamer", "🤝", "Kleedkamer"], ["tactics", "📋", "Tactiek"], ["analyse", "📊", "Analyse"], ["transfers", "💱", "Transfers"], ["scouting", "🔍", "Scouting"], ["jeugd", "🎓", "Jeugd"],
       ["competitions", "🏆", "Competities"], ["news", "📰", "Nieuws"], ["career", "🎖️", "Carrière"],
       ["directie", "🏛️", "Directie"], ["fans", "📣", "Fans"], ["finances", "💰", "Financiën"], ["inbox", "📨", "Inbox", unread], ["settings", "⚙️", "Meer"]
     ].map(n => `<div class="nav-item ${screen === n[0] ? "active" : ""}" onclick="UI.nav('${n[0]}')"><span class="ico">${icon(n[0])}</span><span>${n[2]}</span>${n[3] ? `<span class="nav-badge">${n[3]}</span>` : ""}</div>`).join("");
@@ -7847,7 +7871,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function renderScreen() {
     const m = $("#main"); if (!m) return;
-    ({ dashboard: scrDashboard, match: scrMatch, squad: scrSquad, tactics: scrTactics, transfers: scrTransfers, scouting: scrScouting, competitions: scrCompetitions, news: scrNews, career: scrCareer, kleedkamer: scrKleedkamer, jeugd: scrJeugd, directie: scrDirectie, fans: scrFans, finances: scrFinances, inbox: scrInbox, settings: scrSettings }[screen] || scrDashboard)(m);
+    ({ dashboard: scrDashboard, match: scrMatch, squad: scrSquad, tactics: scrTactics, analyse: scrAnalyse, transfers: scrTransfers, scouting: scrScouting, competitions: scrCompetitions, news: scrNews, career: scrCareer, kleedkamer: scrKleedkamer, jeugd: scrJeugd, directie: scrDirectie, fans: scrFans, finances: scrFinances, inbox: scrInbox, settings: scrSettings }[screen] || scrDashboard)(m);
     deEmoji(m);
   }
 
@@ -8011,9 +8035,16 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   // ---- FM-grade selectie-overzicht met views + sorteerbare kolommen ----
   function squadViewTabs() {
-    const views = [["algemeen", "Algemeen"], ["contract", "Contract"], ["ontwikkeling", "Ontwikkeling"], ["conditie", "Conditie"]];
+    const views = [["algemeen", "Algemeen"], ["attributen", "Attributen"], ["contract", "Contract"], ["ontwikkeling", "Ontwikkeling"], ["conditie", "Conditie"]];
     return views.map(v => `<button class="${squadView === v[0] ? "active" : ""}" onclick="UI.setSquadView('${v[0]}')">${v[1]}</button>`).join("");
   }
+  // attribuutwaarde (met GK-mapping) + gekleurde cel — FM-attributentabel
+  function attrVal(p, key) {
+    const a = p.attrs || {};
+    if (p.pos === "GK") { const gk = { pac: a.ref, sho: a.hand, pas: a.pas, dri: a.def, def: a.def, phy: a.phy }; return gk[key] != null ? gk[key] : (a[key] || 0); }
+    return a[key] != null ? a[key] : 0;
+  }
+  function atCell(p, key) { const v = Math.round(attrVal(p, key)); const c = v >= 80 ? "var(--accent)" : v >= 68 ? "var(--gold)" : v >= 55 ? "var(--txt)" : "var(--bad)"; return `<td class="tbl-num at-cell" style="color:${c};font-weight:${v >= 80 ? 800 : 600}">${v}</td>`; }
   function setSquadView(v) { squadView = v; renderScreen(); }
   function sortSquad(c) { squadSort = c; renderScreen(); }
   function lineOrder(p) { const o = { GK: 0, DEF: 1, MID: 2, ATT: 3 }; return o[line(p.pos)]; }
@@ -8040,14 +8071,20 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ovr: (a, b) => b.ovr - a.ovr, age: (a, b) => a.age - b.age, value: (a, b) => b.value - a.value,
       pot: (a, b) => (knowOf(b) ? b.pot : 0) - (knowOf(a) ? a.pot : 0),
       growth: (a, b) => (b.ovr - startOvr(b)) - (a.ovr - startOvr(a)),
-      contract: (a, b) => (a.contract || 0) - (b.contract || 0)
+      contract: (a, b) => (a.contract || 0) - (b.contract || 0),
+      pac: (a, b) => attrVal(b, "pac") - attrVal(a, "pac"), sho: (a, b) => attrVal(b, "sho") - attrVal(a, "sho"),
+      pas: (a, b) => attrVal(b, "pas") - attrVal(a, "pas"), dri: (a, b) => attrVal(b, "dri") - attrVal(a, "dri"),
+      adef: (a, b) => attrVal(b, "def") - attrVal(a, "def"), phy: (a, b) => attrVal(b, "phy") - attrVal(a, "phy")
     };
     players.sort(sortFns[squadSort] || sortFns.pos);
     const inXI = id => sq.xi.indexOf(id) >= 0;
     const nameCell = p => `${inXI(p.id) ? "🟢 " : ""}${p.number ? "<span class='muted'>#" + p.number + "</span> " : ""}<b>${p.name}</b>${p.transferRequest ? " 📤" : ""}${p.loanedFrom ? " <span class='pill'>huur</span>" : ""}${p.isLegend ? " ⭐" : ""}`;
     const H = (c, lbl, num) => `<th class="${num ? "tbl-num" : ""}" style="cursor:pointer" onclick="UI.sortSquad('${c}')">${lbl}${squadSort === c ? " ▾" : ""}</th>`;
     let head, row;
-    if (squadView === "contract") {
+    if (squadView === "attributen") {
+      head = `${H("pos", "Pos")}<th>Naam</th>${H("ovr", "OVR", 1)}${H("pac", "SNE", 1)}${H("sho", "SHO", 1)}${H("pas", "PAS", 1)}${H("dri", "DRI", 1)}${H("adef", "VER", 1)}${H("phy", "FYS", 1)}<th></th>`;
+      row = p => `<td>${posChip(p.pos)}</td><td>${nameCell(p)} ${formBadge(p)}</td><td class="tbl-num">${ovrBadge(p.ovr)}</td>${atCell(p, "pac")}${atCell(p, "sho")}${atCell(p, "pas")}${atCell(p, "dri")}${atCell(p, "def")}${atCell(p, "phy")}<td><button class="btn sm" onclick="UI.playerCard(${p.id})">Info</button></td>`;
+    } else if (squadView === "contract") {
       head = `${H("pos", "Pos")}<th>Naam</th>${H("age", "Lft", 1)}${H("ovr", "OVR", 1)}<th class="tbl-num">Salaris</th>${H("contract", "Contract", 1)}${H("value", "Waarde", 1)}<th></th>`;
       row = p => `<td>${posChip(p.pos)}</td><td>${nameCell(p)}</td><td class="tbl-num">${p.age}</td><td class="tbl-num">${ovrBadge(p.ovr)}</td><td class="tbl-num">€${p.wage.toFixed(1)}k</td><td class="tbl-num">${contractCell(p)}</td><td class="tbl-num">${fmtM(p.value)}</td><td>${p.loanedFrom ? "<span class='muted'>huur</span>" : `<button class="btn sm" onclick="UI.openContract(${p.id})">Onderhandel</button>`}</td>`;
     } else if (squadView === "ontwikkeling") {
@@ -8073,11 +8110,63 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function setFormation(f) { GAME.setFormation(GAME.getState().clubId, f); selPlayer = null; renderScreen(); }
   function autoPick() { const G = GAME.getState(); G.squads[G.clubId].xi = GAME.pickBestXI(G.squads[G.clubId], G.squads[G.clubId].formation); renderScreen(); }
-  function attrRow(lbl, v) { if (v == null) return ""; return `<div class="attr-row"><span>${lbl}</span><b>${v}</b><i class="attr-bar"><b style="width:${v}%;background:${v >= 78 ? "var(--accent)" : v >= 62 ? "var(--gold)" : "var(--warn)"}"></b></i></div>`; }
+  function attrRow(lbl, v, extra) { if (v == null) return ""; return `<div class="attr-row"><span>${lbl}${extra || ""}</span><b>${v}</b><i class="attr-bar"><b style="width:${v}%;background:${v >= 78 ? "var(--accent)" : v >= 62 ? "var(--gold)" : "var(--warn)"}"></b></i></div>`; }
+  // ontwikkelingsverwachting per attribuut (leeftijd + potentie; fysiek piekt eerder)
+  function attrTrendArrow(p, key) {
+    const age = p.age || 24, gap = Math.max(0, (p.pot || p.ovr) - p.ovr), physical = ["pac", "phy", "ref"].includes(key);
+    let t;
+    if (age <= 19) t = gap >= 4 ? 2 : 1;
+    else if (age <= 22) t = gap >= 3 ? 1 : (gap > 0 ? 1 : 0);
+    else if (age <= 26) t = gap >= 5 ? 1 : (physical && age >= 26 ? -0 : 0);
+    else if (age <= 29) t = physical ? -1 : (gap >= 4 ? 1 : 0);
+    else if (age <= 32) t = physical ? -1 : -1;
+    else t = physical ? -2 : -1;
+    const map = { 2: ["↑", "var(--accent)"], 1: ["↗", "var(--accent)"], 0: ["→", "var(--muted)"], "-1": ["↘", "var(--bad)"], "-2": ["↓", "var(--bad)"] };
+    const m = map[t] || map[0];
+    return `<span style="color:${m[1]};font-size:11px;margin-left:5px;font-weight:700" title="ontwikkelingsverwachting">${m[0]}</span>`;
+  }
+  function strengthsWeaknesses(p) {
+    const a = p.attrs || {}, d = p.det || {};
+    const labels = p.pos === "GK"
+      ? [["Reflexen", a.ref], ["Handelen", a.hand], ["Positiespel", a.def], ["Fysiek", a.phy], ["Uittrappen", a.pas], ["Rust a/d bal", d.composure]]
+      : [["Snelheid", a.pac], ["Schot", a.sho], ["Passing", a.pas], ["Dribbel", a.dri], ["Verdedigen", a.def], ["Fysiek", a.phy], ["Afronding", d.finishing], ["Visie", d.vision], ["Koppen", d.heading], ["Tackelen", d.tackling], ["Werklust", d.workrate], ["Rust a/d bal", d.composure]];
+    const valid = labels.filter(x => x[1] != null).sort((x, y) => y[1] - x[1]);
+    return { str: valid.filter(x => x[1] >= 74).slice(0, 4).map(x => x[0]), weak: valid.filter(x => x[1] < 56).slice(-3).map(x => x[0]) };
+  }
+  function roleSuitList(p) {
+    const R = (D.ROLES || {})[p.pos] || []; if (!R.length) return [];
+    const suit = r => { if (!r.attrs || !r.attrs.length) return p.ovr; let s = 0; r.attrs.forEach(k => s += (p.attrs[k] || 50)); return Math.round(s / r.attrs.length); };
+    return R.map(r => ({ name: r.name, suit: suit(r) })).sort((a, b) => b.suit - a.suit).slice(0, 3);
+  }
+  function projOvr(p, ag) {
+    const cur = p.ovr, age = p.age || 24, pot = Math.max(cur, p.pot || cur);
+    const peakVal = age <= 27 ? pot : cur;
+    let v;
+    if (ag < age) v = cur - (cur - 40) * 0.018 * (age - ag);
+    else if (ag <= 27) v = cur + (peakVal - cur) * ((ag - age) / Math.max(1, 27 - age));
+    else v = peakVal - Math.max(0, ag - 30) * 1.5;
+    return Math.max(42, Math.min(99, Math.round(v)));
+  }
+  function devCurveSVG(p) {
+    const age = p.age || 24, a0 = Math.max(16, age - 5), a1 = Math.min(37, age + 8), W = 260, H = 68, pad = 8;
+    const ages = []; for (let ag = a0; ag <= a1; ag++) ages.push(ag);
+    const vals = ages.map(ag => projOvr(p, ag)), vmin = Math.min.apply(null, vals) - 2, vmax = Math.max.apply(null, vals) + 2;
+    const X = ag => pad + (ag - a0) / (a1 - a0) * (W - 2 * pad), Y = v => H - pad - (v - vmin) / Math.max(1, vmax - vmin) * (H - 2 * pad);
+    const line = ages.map((ag, i) => `${X(ag).toFixed(1)},${Y(vals[i]).toFixed(1)}`).join(" ");
+    const cx = X(age), cy = Y(projOvr(p, age));
+    return `<svg viewBox="0 0 ${W} ${H}" class="dev-curve" preserveAspectRatio="none">
+      <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.2"/>
+      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.6" fill="var(--gold)"/>
+      <text x="${cx.toFixed(1)}" y="${Math.max(9, cy - 6).toFixed(1)}" fill="var(--gold)" font-size="9" text-anchor="middle">nu ${p.ovr}</text>
+      <text x="${pad}" y="${H - 1}" fill="var(--muted)" font-size="8">${a0}j</text>
+      <text x="${W - pad}" y="${H - 1}" fill="var(--muted)" font-size="8" text-anchor="end">${a1}j</text>
+    </svg>`;
+  }
   function playerCard(pid) {
     const G = GAME.getState(); const p = G.players[pid]; const a = p.attrs; const d = p.det || {}; const isGK = p.pos === "GK";
-    const core = isGK ? [["Reflexen", a.ref], ["Handelen", a.hand], ["Positiespel", a.def], ["Fysiek", a.phy], ["Uittrappen", a.pas]]
-      : [["Snelheid", a.pac], ["Schot", a.sho], ["Passing", a.pas], ["Dribbel", a.dri], ["Verdedigen", a.def], ["Fysiek", a.phy]];
+    const core = isGK ? [["Reflexen", a.ref, "ref"], ["Handelen", a.hand, "hand"], ["Positiespel", a.def, "def"], ["Fysiek", a.phy, "phy"], ["Uittrappen", a.pas, "pas"]]
+      : [["Snelheid", a.pac, "pac"], ["Schot", a.sho, "sho"], ["Passing", a.pas, "pas"], ["Dribbel", a.dri, "dri"], ["Verdedigen", a.def, "def"], ["Fysiek", a.phy, "phy"]];
+    const sw = strengthsWeaknesses(p); const roles = roleSuitList(p);
     const detList = [["Afronding", d.finishing], ["Positiespel", d.positioning], ["Visie", d.vision], ["Rust a/d bal", d.composure], ["Tackelen", d.tackling], ["Koppen", d.heading], ["Conditie", d.stamina], ["Kracht", d.strength], ["Werklust", d.workrate], ["Leiderschap", d.leadership], ["Constantheid", d.consistency], ["Grote duels", d.bigGame]].filter(x => x[1] != null);
     const traitsHtml = (p.traits && p.traits.length) ? p.traits.map(t => `<span class="pill gold" style="margin:2px">${t}</span>`).join("") : "<span class='muted'>—</span>";
     const mine = p.club === G.clubId;
@@ -8098,7 +8187,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="flexbar" style="margin-bottom:6px">${posChip(p.pos)}${p.pos2 ? ` <span class="muted">/ ${p.pos2}</span>` : ""} <span class="muted">${D.POSITIONS[p.pos].label}</span><span class="spacer"></span><span class="muted">${p.nat} · ${p.age} jr · ${p.personality || ""}</span></div>
       <div class="center" style="margin:2px 0 6px">${radarSVG(a)}</div>
       <div class="grid2">
-        <div><div class="muted" style="margin-bottom:4px">Kernattributen</div>${core.map(b => attrRow(b[0], b[1])).join("")}
+        <div><div class="muted" style="margin-bottom:4px">Kernattributen <span style="font-size:10px">(pijl = verwachte groei)</span></div>${core.map(b => attrRow(b[0], b[1], attrTrendArrow(p, b[2]))).join("")}
           <div class="muted" style="margin:10px 0 4px">Traits</div><div>${traitsHtml}</div></div>
         <div><div class="muted" style="margin-bottom:4px">Detail-attributen</div>${detList.map(b => attrRow(b[0], b[1])).join("") || "<span class='muted'>—</span>"}</div>
       </div>
@@ -8106,11 +8195,73 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div><p>Waarde: <b>${fmtM(p.value)}</b></p><p>Salaris: <b>€${p.wage.toFixed(1)}k</b>/wk</p><p>Contract: <b>${p.contract} jaar</b></p>${p.releaseClause ? `<p>Afkoopsom: <b>${fmtM(p.releaseClause)}</b></p>` : ""}</div>
         <div><p>Potentie: ${potDisplay(p)}${knowOf(p) > 0 && knowOf(p) < 90 ? ` <span class="muted" style="font-size:11px">(${knowOf(p)}% in beeld)</span>` : ""}</p><p>Fitness: <b>${p.fitness}</b> · Moraal: <b>${p.morale}</b></p><p>Seizoen: <b>${p.sGoals}g ${p.sAssists}a</b> (${p.sApps})</p>${p.injuredWeeks > 0 ? `<p class="pill red">🚑 ${p.injuredWeeks}w</p>` : ""}${p.suspended > 0 ? `<p class="pill red">⛔ ${p.suspended}</p>` : ""}${p.transferRequest ? `<p class="pill red">📤 wil weg</p>` : ""}</div>
       </div>
+      <div class="prof-grid">
+        <div class="prof-box"><div class="muted" style="margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:1px">💪 Sterktes</div>${sw.str.length ? sw.str.map(s => `<span class="pill" style="background:rgba(22,229,143,.14);border-color:rgba(22,229,143,.3);margin:2px">${s}</span>`).join("") : "<span class='muted'>—</span>"}
+          <div class="muted" style="margin:10px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1px">⚠️ Aandachtspunten</div>${sw.weak.length ? sw.weak.map(s => `<span class="pill" style="background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.3);margin:2px">${s}</span>`).join("") : "<span class='muted'>geen zwaktes</span>"}</div>
+        <div class="prof-box"><div class="muted" style="margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:1px">🎯 Beste rollen</div>${roles.length ? roles.map(r => `<div class="role-suit"><span>${r.name}</span><span class="rs-bar"><i style="width:${r.suit}%;background:${r.suit >= 78 ? "var(--accent)" : r.suit >= 62 ? "var(--gold)" : "var(--warn)"}"></i></span><b>${r.suit}</b></div>`).join("") : "<span class='muted'>—</span>"}</div>
+      </div>
+      <div class="dev-box"><div class="flexbar"><span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">📈 Verwachte ontwikkeling</span><span class="spacer"></span><span class="muted" style="font-size:11px">nu ${p.ovr} · piek ~${Math.max(p.ovr, projOvr(p, 27))}</span></div>${devCurveSVG(p)}</div>
       ${statusBlock}
       <div class="flexbar" style="margin-top:14px;flex-wrap:wrap;gap:6px">${mine ? `<button class="btn blue sm" onclick="UI.doRenew(${p.id})">Verlengen</button><button class="btn warn sm" onclick="UI.openSell(${p.id})">Verkopen</button><button class="btn sm" onclick="UI.praise(${p.id})">👍 Compliment</button><button class="btn sm" onclick="UI.criticize(${p.id})">👎 Aanspreken</button>${p.age <= 21 && !p.loanedFrom ? `<button class="btn sm" onclick="UI.loanOut(${p.id})">Verhuur (ervaring)</button>` : ""}<select class="live-select" title="Individuele training" onchange="UI.setIndTrain(${p.id},this.value)" style="padding:4px;font-size:12px">${["", "Aanvallen", "Verdedigen", "Conditie", "Techniek"].map(o => `<option value="${o}" ${(p.indTrain || "") === o ? "selected" : ""}>${o || "Teamtraining"}</option>`).join("")}</select>` : `<button class="btn primary sm" onclick="UI.openBuy(${p.id})">Bod</button>${knowOf(p) < 90 ? `<button class="btn sm" onclick="UI.doScout(${p.id})">🔍 Scout${knowOf(p) > 0 ? " (" + knowOf(p) + "%)" : ""}</button>` : ""}${p.releaseClause ? `<button class="btn primary sm" onclick="UI.buyClause(${p.id})">Afkoopsom (${fmtM(p.releaseClause)})</button>` : ""}`}</div>`, true);
   }
   function buyClause(pid) { const p = GAME.getState().players[pid]; const r = GAME.buyPlayer(pid, p.releaseClause); toast(r.msg); if (r.ok) { closeModal(); GAME.saveGame(); renderScreen(); } }
   function doRenew(pid) { toast(GAME.renewContract(pid).msg); closeModal(); }
+  // ============================================================ ANALYSE / DATA-HUB
+  function scrAnalyse(m) {
+    const G = GAME.getState(); const sq = G.squads[G.clubId]; const club = G.clubs[G.clubId];
+    const players = (sq ? sq.list.map(id => sq.players[id]).filter(Boolean) : []);
+    if (!players.length) { m.innerHTML = topbar("Analyse", "Data-hub") + "<div class='panel'><p class='muted'>Geen selectie beschikbaar.</p></div>"; return; }
+    const formVal = p => { if (!p.formHist || !p.formHist.length) return null; const a = p.formHist.slice(-5); return a.reduce((s, x) => s + x, 0) / a.length; };
+    // linie-sterkte
+    const lines = [["GK", "Keepers"], ["DEF", "Verdediging"], ["MID", "Middenveld"], ["ATT", "Aanval"]];
+    const lineData = lines.map(L => { const ps = players.filter(p => line(p.pos) === L[0]); const avg = ps.length ? Math.round(ps.reduce((s, p) => s + p.ovr, 0) / ps.length) : 0; return { lbl: L[1], n: ps.length, avg }; });
+    const maxAvg = Math.max(1, Math.max.apply(null, lineData.map(l => l.avg)));
+    // leeftijd
+    const young = players.filter(p => p.age <= 21).length, prime = players.filter(p => p.age >= 22 && p.age <= 29).length, vet = players.filter(p => p.age >= 30).length;
+    const avgAge = (players.reduce((s, p) => s + p.age, 0) / players.length).toFixed(1);
+    const ageBar = (n, col) => `<div class="an-agebar"><i style="width:${Math.round(n / players.length * 100)}%;background:${col}"></i><span>${n}</span></div>`;
+    // positionele diepte
+    const posMap = {}; players.forEach(p => { (posMap[p.pos] = posMap[p.pos] || []).push(p); });
+    const posRows = Object.keys(posMap).sort((a, b) => (D.POSITIONS[a] ? lineNum(a) : 9) - (D.POSITIONS[b] ? lineNum(b) : 9)).map(k => { const ps = posMap[k].sort((a, b) => b.ovr - a.ovr); const thin = ps.length < 2; return `<div class="an-posrow"><span class="an-pos">${posChip(k)} <b>${D.POSITIONS[k] ? D.POSITIONS[k].label : k}</b></span><span class="muted">${ps.length} speler${ps.length > 1 ? "s" : ""}</span><span class="spacer"></span><span>${ps.slice(0, 3).map(p => `${lastName(p.name)} ${ovrMini(p.ovr)}`).join(" · ")}</span>${thin ? '<span class="pill red" style="margin-left:6px">dun bezet</span>' : ""}</div>`; }).join("");
+    // contracten
+    const expiring = players.filter(p => (p.contract || 0) <= 1).sort((a, b) => (a.contract || 0) - (b.contract || 0));
+    // loon
+    const earners = players.slice().sort((a, b) => b.wage - a.wage).slice(0, 6); const wageTot = players.reduce((s, p) => s + p.wage, 0);
+    // vorm
+    const wf = players.filter(p => formVal(p) != null);
+    const hot = wf.slice().sort((a, b) => formVal(b) - formVal(a)).slice(0, 3), cold = wf.slice().sort((a, b) => formVal(a) - formVal(b)).slice(0, 3);
+    // top-presteerders
+    const perf = players.slice().sort((a, b) => (b.sGoals + b.sAssists) - (a.sGoals + a.sAssists)).slice(0, 6);
+    const perfHas = perf.some(p => (p.sGoals + p.sAssists) > 0);
+    const pRow = p => `<div class="flexbar" style="padding:3px 0;cursor:pointer" onclick="UI.playerCard(${p.id})">${playerAvatar(p, 24)}<b style="margin-left:6px">${lastName(p.name)}</b><span class="spacer"></span><span class="muted">${p.sGoals}g ${p.sAssists}a</span></div>`;
+    m.innerHTML = topbar("Analyse", `Data-hub · ${club.name}`) + `
+      <div class="grid3">
+        <div class="kpi"><div class="v">${Math.round(players.reduce((s, p) => s + p.ovr, 0) / players.length)}</div><div class="l">Gem. OVR selectie</div></div>
+        <div class="kpi"><div class="v">${avgAge}</div><div class="l">Gemiddelde leeftijd</div></div>
+        <div class="kpi"><div class="v">€${wageTot.toFixed(0)}k</div><div class="l">Loonsom p/wk</div></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h3>📊 Sterkte per linie</h3>${lineData.map(l => `<div class="an-line"><span class="an-line-lbl">${l.lbl} <span class="muted">(${l.n})</span></span><span class="an-line-bar"><i style="width:${Math.round(l.avg / maxAvg * 100)}%;background:${l.avg >= 78 ? "var(--accent)" : l.avg >= 68 ? "var(--gold)" : "var(--warn)"}"></i></span><b>${l.avg}</b></div>`).join("")}</div>
+        <div class="panel"><h3>👶 Leeftijdsprofiel</h3>
+          <div class="muted" style="font-size:12px;margin-bottom:2px">Jeugd (≤21): ${young}</div>${ageBar(young, "var(--accent)")}
+          <div class="muted" style="font-size:12px;margin:6px 0 2px">Prime (22–29): ${prime}</div>${ageBar(prime, "var(--gold)")}
+          <div class="muted" style="font-size:12px;margin:6px 0 2px">Routine (30+): ${vet}</div>${ageBar(vet, "#e0a3ff")}
+        </div>
+      </div>
+      <div class="panel"><h3>🧩 Positionele diepte</h3>${posRows}</div>
+      <div class="grid2">
+        <div class="panel"><h3>🔥 Vorm</h3>
+          <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">In vorm</div>${hot.length ? hot.map(p => `<div class="flexbar" style="padding:2px 0"><span>${lastName(p.name)} 🔥</span><span class="spacer"></span><b style="color:var(--accent)">${formVal(p).toFixed(1)}</b></div>`).join("") : "<span class='muted'>—</span>"}
+          <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px">Uit vorm</div>${cold.length ? cold.map(p => `<div class="flexbar" style="padding:2px 0"><span>${lastName(p.name)} ❄️</span><span class="spacer"></span><b style="color:var(--bad)">${formVal(p).toFixed(1)}</b></div>`).join("") : "<span class='muted'>—</span>"}</div>
+        <div class="panel"><h3>⚽ Top-presteerders</h3>${perfHas ? perf.filter(p => p.sGoals + p.sAssists > 0).map(pRow).join("") : "<p class='muted'>Nog geen goals of assists dit seizoen.</p>"}</div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h3>💰 Grootverdieners</h3>${earners.map(p => `<div class="flexbar" style="padding:3px 0"><span>${lastName(p.name)} <span class="muted">${p.age}j</span></span><span class="spacer"></span><b>€${p.wage.toFixed(1)}k</b></div>`).join("")}</div>
+        <div class="panel"><h3>📅 Aflopende contracten</h3>${expiring.length ? expiring.map(p => `<div class="flexbar" style="padding:3px 0;cursor:pointer" onclick="UI.playerCard(${p.id})"><span>${lastName(p.name)} ${ovrMini(p.ovr)}</span><span class="spacer"></span><span class="${(p.contract || 0) <= 1 ? "pill red" : "muted"}">${p.contract || 0} jaar</span></div>`).join("") : "<p class='muted'>Geen spelers met een kort contract.</p>"}</div>
+      </div>`;
+  }
+  function lineNum(pos) { const o = { GK: 0, DEF: 1, MID: 2, ATT: 3 }; return o[line(pos)] != null ? o[line(pos)] : 9; }
+  function ovrMini(v) { const c = v >= 80 ? "var(--accent)" : v >= 68 ? "var(--gold)" : "var(--muted)"; return `<span style="color:${c};font-weight:700;font-size:12px">${v}</span>`; }
 
   // ============================================================ TACTIEK
   function scrTactics(m) {
