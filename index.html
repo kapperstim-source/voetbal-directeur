@@ -6313,6 +6313,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     else if (p.age >= 30 && D.srand() < (p.age >= 33 ? 0.10 : 0.05)) { bumpPerf(p, -1); E.recomputeOvr(p); } // routiniers zakken
   }
   function postMatchdayUpdate(type) {
+    try { repairUserSquad(); } catch (e) { }   // ruim eventuele wees-spelers op vóór de weekverwerking
     Object.keys(G.squads).forEach(cid => {
       const sq = G.squads[cid];
       const isUser = cid === G.clubId;
@@ -6888,6 +6889,14 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     return { ok: true, msg: `${p.name} verhuurd voor een seizoen.` };
   }
   function staffWageWeekly() { return G.staff ? Object.values(G.staff).reduce((s, x) => s + (x.wage || 0), 0) / 1000 : 0; }
+  // ZELFHERSTEL: verwijder "wees"-spelers uit je selectie (in de lijst maar niet meer echt van jou — bv. na een desync)
+  function repairUserSquad() {
+    if (!G || !G.clubId) return; const sq = G.squads[G.clubId]; if (!sq) return;
+    const before = (sq.list || []).length;
+    sq.list = (sq.list || []).filter(id => { const p = G.players[id]; return p && p.club === G.clubId; });
+    Object.keys(sq.players || {}).forEach(id => { const p = sq.players[id]; if (!p || p.club !== G.clubId) delete sq.players[id]; });
+    if (sq.list.length !== before) { sq.xi = pickBestXI(sq, sq.formation); }
+  }
 
   // ====================== FINANCIËN, SPONSORS & CLUB (Golf 5) ======================
   const SPONSOR_NAMES = ["Holland Bank", "Oranje Telecom", "DeltaWielen", "NL Energie", "Tulpa", "Kanaal+", "VeldFris", "GoalPay", "Polder Verzekeringen", "Amstel Sport", "Batavia Air", "KaasKoning"];
@@ -7682,7 +7691,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       } catch (e2) { console.error(e2); return false; }
     }
   }
-  function loadGame() { try { const r = localStorage.getItem(SAVE_KEY); if (!r) return false; G = JSON.parse(r); if (global.SCOUT && global.SCOUT.migrate) global.SCOUT.migrate(G); if (!G.facilities) initDirector(G, G.clubId === "myclub"); if (G.fanMood == null) G.fanMood = 62; if (G.chemistry == null) G.chemistry = 50; if (!G.mentoring) G.mentoring = []; if (G.tactFamiliarity == null) G.tactFamiliarity = 70; ensureSquadStatus(); if (!G.rivalries) G.rivalries = {}; if (!G.wkSeen) G.wkSeen = {}; if (G.wonderkid === undefined) { G.wonderkid = null; pickWonderkid(); } if (!G.youth) initYouth(); if (!G.commercial) initCommercial(); if (!G.seasonTicket) G.seasonTicket = { price: 300 }; if (G.facilities && G.facilities.hospitality == null) G.facilities.hospitality = 1; return true; } catch (e) { return false; } }
+  function loadGame() { try { const r = localStorage.getItem(SAVE_KEY); if (!r) return false; G = JSON.parse(r); if (global.SCOUT && global.SCOUT.migrate) global.SCOUT.migrate(G); if (!G.facilities) initDirector(G, G.clubId === "myclub"); if (G.fanMood == null) G.fanMood = 62; if (G.chemistry == null) G.chemistry = 50; if (!G.mentoring) G.mentoring = []; if (G.tactFamiliarity == null) G.tactFamiliarity = 70; ensureSquadStatus(); if (!G.rivalries) G.rivalries = {}; if (!G.wkSeen) G.wkSeen = {}; if (G.wonderkid === undefined) { G.wonderkid = null; pickWonderkid(); } if (!G.youth) initYouth(); if (!G.commercial) initCommercial(); if (!G.seasonTicket) G.seasonTicket = { price: 300 }; if (G.facilities && G.facilities.hospitality == null) G.facilities.hospitality = 1; if (G._dayStep == null) G._dayStep = 0; try { repairUserSquad(); } catch (e) { } return true; } catch (e) { return false; } }
   function hasSave() { return !!localStorage.getItem(SAVE_KEY); }
   function deleteSave() { localStorage.removeItem(SAVE_KEY); }
   function getState() { return G; }
@@ -7722,7 +7731,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     buyPlayer, loanPlayer, listForSale, acceptOffer, rejectOffer, renewContract, transferWindowOpen,
     getNextUserMatch, createUserLiveMatch, playMatchday, seasonOver, advanceSeason,
     addInbox, buildTransferMarket,
-    genStaffCandidates, hireStaff, setTrainingIntensity, trainingCamp, loanOutPlayer, staffWageWeekly, STAFF_ROLES,
+    genStaffCandidates, hireStaff, setTrainingIntensity, trainingCamp, loanOutPlayer, staffWageWeekly, STAFF_ROLES, repairUserSquad,
     negotiateSponsors, sponsorWeekly, matchdayIncome, setTicketPrice, setSeasonTicketPrice, takeLoan, seekInvestor,
     COMM_SLOTS, commLabel, commercialOffers, signCommercial, commercialWeekly,
     financialHealth, ffp3Net, ffpThreshold,
@@ -8004,6 +8013,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   // ============================================================ APP SHELL
   function renderApp() {
     const G = GAME.getState(); if (!G) { renderStart(); return; }
+    try { GAME.repairUserSquad && GAME.repairUserSquad(); } catch (e) { }   // ruim wees-spelers op (fix "niet jouw speler")
     const club = G.clubs[G.clubId];
     const unread = G.inbox.filter(i => !i.read).length;
     const nav = [
@@ -9842,7 +9852,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function pickStaff(i) { const r = GAME.hireStaff(staffRole, staffCands[i]); toast(r.msg); if (r.ok) { closeModal(); GAME.saveGame(); renderScreen(); } }
   function setIntensity(v) { GAME.setTrainingIntensity(v); GAME.saveGame(); renderScreen(); }
   function doCamp() { const r = GAME.trainingCamp(); toast(r.msg); GAME.saveGame(); renderScreen(); }
-  function loanOut(pid) { const r = GAME.loanOutPlayer(pid); toast(r.msg); if (r.ok) { closeModal(); GAME.saveGame(); renderScreen(); } }
+  function loanOut(pid) { const r = GAME.loanOutPlayer(pid); toast(r.msg); if (r.ok) closeModal(); GAME.saveGame(); renderApp(); }
 
   // ============================================================ JEUGDAFDELING
   function intakeBanner(G) {
@@ -10602,7 +10612,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
 
     if (budget < 0) items.push({ sev: "urgent", emoji: "🔴", title: "Budget staat rood", detail: "Je staat op " + U.fmtM(budget) + " — FFP-risico.", primary: { label: "Financiën", onclick: "UI.nav('finances')" } });
 
-    var unhappy = mine.filter(function (p) { return p.transferRequest || ((p.ptHappy != null) && p.ptHappy < 30); });
+    var unhappy = mine.filter(function (p) { return p.club === G.clubId && !p.loanedFrom && (p.transferRequest || ((p.ptHappy != null) && p.ptHappy < 30)); });
     unhappy.slice(0, 3).forEach(function (p) { items.push({ sev: "urgent", emoji: "😠", title: U.lastName(p.name) + " is ontevreden", detail: p.transferRequest ? "Transferverzoek ingediend." : "Wil meer speeltijd (" + Math.round(p.ptHappy) + "%).", primary: { label: "Beloof speeltijd", onclick: "UI.promisePT&&UI.promisePT(" + p.id + ")" + R(refresh) }, open: card(p.id) }); });
 
     var exp = mine.filter(function (p) { return (p.contract || 0) <= 1 && !p.loanedFrom; }).sort(function (a, b) { return b.ovr - a.ovr; });
@@ -10617,14 +10627,14 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     var offers = (G.offersIn || []).length;
     if (offers) items.push({ sev: "advies", emoji: "📥", title: offers + " binnengekomen bod" + (offers > 1 ? "en" : ""), detail: "Andere clubs bieden op jouw spelers.", primary: { label: "Bekijk", onclick: "UI.nav('transfers')" } });
 
-    var talents = mine.filter(function (p) { return (p.age || 30) <= 21 && ((p.pot || 0) - (p.ovr || 0)) >= 4 && (p.sApps || 0) <= 3; }).sort(function (a, b) { return (b.pot || 0) - (a.pot || 0); });
+    var talents = mine.filter(function (p) { return p.club === G.clubId && !p.loanedFrom && (p.age || 30) <= 21 && ((p.pot || 0) - (p.ovr || 0)) >= 4 && (p.sApps || 0) <= 3; }).sort(function (a, b) { return (b.pot || 0) - (a.pot || 0); });
     talents.slice(0, 2).forEach(function (p) { items.push({ sev: "advies", emoji: "🌱", title: U.lastName(p.name) + " speelt te weinig", detail: "Talent (" + p.age + "j, pot " + (p.pot || p.ovr) + "). Verhuren voor minuten?", primary: { label: "Verhuur", onclick: "UI.loanOut&&UI.loanOut(" + p.id + ")" }, open: card(p.id) }); });
 
     var byPos = {}; mine.forEach(function (p) { byPos[p.pos] = (byPos[p.pos] || 0) + 1; });
     var thin = Object.keys(byPos).filter(function (k) { return byPos[k] < 2; });
     if (thin.length) items.push({ sev: "advies", emoji: "🧩", title: "Dun bezette positie" + (thin.length > 1 ? "s" : ""), detail: thin.join(", ") + " — versterk of promoveer jeugd.", primary: { label: "Transfers", onclick: "UI.nav('transfers')" } });
 
-    var sellop = mine.filter(function (p) { return (p.age || 0) >= 31 && (p.value || 0) >= 8 && p.club === G.clubId; }).sort(function (a, b) { return (b.value || 0) - (a.value || 0); });
+    var sellop = mine.filter(function (p) { return (p.age || 0) >= 31 && (p.value || 0) >= 8 && p.club === G.clubId && !p.loanedFrom; }).sort(function (a, b) { return (b.value || 0) - (a.value || 0); });
     sellop.slice(0, 1).forEach(function (p) { items.push({ sev: "advies", emoji: "💰", title: "Verkoopkans: " + U.lastName(p.name), detail: p.age + "j, waarde " + U.fmtM(p.value) + ". Verzilver nu het kan.", primary: { label: "Zet te koop", onclick: "UI.openSell&&UI.openSell(" + p.id + ")" }, open: card(p.id) }); });
 
     try { var pm = GAME.getNextUserMatch ? GAME.getNextUserMatch() : null; if (G.press && G.press.q && !G.press.done && pm && !pm.idle) items.push({ sev: "advies", emoji: "🎤", title: "Persconferentie", detail: "De media wacht op je reactie vóór de wedstrijd.", primary: { label: "Persco", onclick: "UI.openPress&&UI.openPress()" } }); } catch (e) { }
