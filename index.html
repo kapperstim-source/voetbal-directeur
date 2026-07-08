@@ -400,6 +400,13 @@ tbody tr:last-child td{border-bottom:none}
 .onb-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.18)}
 .onb-dots span.on{background:var(--accent,#16e58f);box-shadow:0 0 8px rgba(22,229,143,.6)}
 .onb-actions{display:flex;align-items:center;gap:8px}
+/* dag-voor-dag dagverslag */
+.dayrep{min-width:280px}
+.dr-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.dr-day{font-family:var(--display,inherit);font-weight:900;font-size:22px;text-transform:uppercase;letter-spacing:1px}
+.dr-count{font-size:11px;color:var(--accent,#16e58f);font-weight:700}
+.dr-line{padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:6px;font-size:13px;line-height:1.4}
+.dr-line.dr-train{border-color:rgba(22,229,143,.25);background:linear-gradient(160deg,rgba(22,229,143,.09),rgba(255,255,255,.02))}
 /* competitie-statistieken + programma */
 .stat-tbl{width:100%;border-collapse:collapse;margin-top:4px}
 .stat-tbl td{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
@@ -6733,7 +6740,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     if (G.transferEmbargo > 0) return { ok: false, msg: `Transferembargo actief (FFP) — je mag nog ${G.transferEmbargo} seizoen(en) geen spelers kopen.` };
     const club = G.clubs[G.clubId];
     if (typeof offer === "number" || offer == null) offer = { fee: offer == null ? Math.round(p.value * 100) / 100 : offer };
-    const fee = offer.fee || 0, sellOn = offer.sellOn || 0, signBonus = offer.signBonus || 0;
+    let fee = offer.fee || 0; const sellOn = offer.sellOn || 0, signBonus = offer.signBonus || 0;
+    if (!p.club) fee = 0; // transfervrije speler: NOOIT een transfersom (alleen tekengeld/salaris)
     const installments = Math.max(1, offer.installments || 1), swapId = offer.swapId || null;
     const agentFee = Math.round(fee * 0.05 * 100) / 100;             // zaakwaarnemer (#64)
     const swapP = swapId ? G.players[swapId] : null;
@@ -6748,9 +6756,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const effGap = (p.ovr - clubLevel) - youthRelief - euroBonus - wagePull;
     if (effGap > 8) return { ok: false, msg: `${p.name} ziet een overstap naar ${club.name} (nog) niet zitten — de club is te klein voor hem. Bouw eerst aan je reputatie (of haal jonger talent).` };
     const sellerId = p.club;
-    if (!sellerId) {  // transfervrij/prospect: zaakwaarnemer vraagt tekengeld -> geen gratis wonderkinderen meer
-      const minSign = Math.max(0.1, Math.round(p.value * 0.6 * 100) / 100);
-      if (fee + signBonus < minSign) return { ok: false, msg: `${p.name} is transfervrij, maar zijn zaakwaarnemer vraagt minstens €${minSign.toFixed(2)}M tekengeld/commissie (vul dit bij Transfersom of Tekenbonus in).` };
+    if (!sellerId) {  // transfervrij: GEEN transfersom, maar de zaakwaarnemer vraagt wél tekengeld/commissie
+      const minSign = Math.max(0.1, Math.round(p.value * 0.3 * 100) / 100);
+      if (signBonus < minSign) return { ok: false, msg: `${p.name} is transfervrij (geen transfersom), maar zijn zaakwaarnemer vraagt minstens €${minSign.toFixed(2)}M tekengeld. Vul dat in bij Tekenbonus.` };
     }
     const effective = fee + (swapP ? swapP.value : 0) + (sellOn > 0 ? p.value * sellOn / 100 * 0.4 : 0);
     // ---- FASE 1: clubakkoord (alleen checken, nog niet muteren) ----
@@ -8364,7 +8372,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="dev-box"><div class="flexbar"><span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">📈 Verwachte ontwikkeling</span><span class="spacer"></span><span class="muted" style="font-size:11px">nu ${p.ovr} · piek ~${Math.max(p.ovr, projOvr(p, 27))}</span></div>${devCurveSVG(p)}</div>
       ${extHtml("playerCard", p)}
       ${statusBlock}
-      <div class="flexbar" style="margin-top:14px;flex-wrap:wrap;gap:6px">${mine ? `<button class="btn blue sm" onclick="UI.doRenew(${p.id})">Verlengen</button><button class="btn warn sm" onclick="UI.openSell(${p.id})">Verkopen</button><button class="btn sm" onclick="UI.praise(${p.id})">👍 Compliment</button><button class="btn sm" onclick="UI.criticize(${p.id})">👎 Aanspreken</button>${!p.loanedFrom ? `<button class="btn sm" onclick="UI.loanOut(${p.id})">Verhuren</button>` : ""}<select class="live-select" title="Individuele training" onchange="UI.setIndTrain(${p.id},this.value)" style="padding:4px;font-size:12px">${["", "Aanvallen", "Verdedigen", "Conditie", "Techniek"].map(o => `<option value="${o}" ${(p.indTrain || "") === o ? "selected" : ""}>${o || "Teamtraining"}</option>`).join("")}</select>` : `<button class="btn primary sm" onclick="UI.openBuy(${p.id})">Bod</button>${knowOf(p) < 90 ? `<button class="btn sm" onclick="UI.doScout(${p.id})">🔍 Scout${knowOf(p) > 0 ? " (" + knowOf(p) + "%)" : ""}</button>` : ""}${p.releaseClause ? `<button class="btn primary sm" onclick="UI.buyClause(${p.id})">Afkoopsom (${fmtM(p.releaseClause)})</button>` : ""}`}</div>`, true);
+      <div class="flexbar" style="margin-top:14px;flex-wrap:wrap;gap:6px">${mine ? `<button class="btn blue sm" onclick="UI.doRenew(${p.id})">Verlengen</button><button class="btn warn sm" onclick="UI.openSell(${p.id})">Verkopen</button><button class="btn sm" onclick="UI.praise(${p.id})">👍 Compliment</button><button class="btn sm" onclick="UI.criticize(${p.id})">👎 Aanspreken</button>${!p.loanedFrom ? `<button class="btn sm" onclick="UI.loanOut(${p.id})">Verhuren</button>` : ""}<select class="live-select" title="Individuele training" onchange="UI.setIndTrain(${p.id},this.value)" style="padding:4px;font-size:12px">${["", "Aanvallen", "Verdedigen", "Conditie", "Techniek"].map(o => `<option value="${o}" ${(p.indTrain || "") === o ? "selected" : ""}>${o || "Teamtraining"}</option>`).join("")}</select>` : `<button class="btn primary sm" onclick="UI.openBuy(${p.id})">Bod</button>${p.club ? `<button class="btn blue sm" onclick="UI.openLoan(${p.id})">Huren</button>` : ""}${knowOf(p) < 90 ? `<button class="btn sm" onclick="UI.doScout(${p.id})">🔍 Scout${knowOf(p) > 0 ? " (" + knowOf(p) + "%)" : ""}</button>` : ""}${p.releaseClause ? `<button class="btn primary sm" onclick="UI.buyClause(${p.id})">Afkoopsom (${fmtM(p.releaseClause)})</button>` : ""}`}</div>`, true);
   }
   function buyClause(pid) { const p = GAME.getState().players[pid]; const r = GAME.buyPlayer(pid, p.releaseClause); toast(r.msg); if (r.ok) { closeModal(); GAME.saveGame(); renderScreen(); } }
   function doRenew(pid) { toast(GAME.renewContract(pid).msg); closeModal(); }
@@ -9106,6 +9114,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const userResult = { homeId: M.home.club, awayId: M.away.club, hg: M.hg, ag: M.ag, events: M.events, minutesPlayed: M.minutesPlayed, shootoutWin };
     const out = GAME.playMatchday(userResult);
     try { updateClubRecords(userResult); } catch (e) { }
+    GAME.getState()._dayStep = 0; // nieuwe trainingsweek na de wedstrijd
     GAME.saveGame();
     renderPostMatch(out, type, userResult, shootoutWin);
   }
@@ -9284,17 +9293,21 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function doFriendly() { const r = GAME.preSeasonFriendly(); toast(r.msg); GAME.saveGame(); renderScreen(); }
   function simIdle() {
-    const out = GAME.playMatchday(null); GAME.saveGame();
+    const out = GAME.playMatchday(null); GAME.getState()._dayStep = 0; GAME.saveGame();
     const G = GAME.getState();
     let html = "<h3>Speeldag gespeeld</h3>";
     if (out.cupResults) html += `<div style="margin-top:10px">${out.cupResults.map(r => `<div class="flexbar" style="padding:4px 0">${clubBadge(r.home, 18)} ${G.clubs[r.home].name} <b style="margin:0 8px">${r.hg}-${r.ag}</b> ${G.clubs[r.away].name} ${clubBadge(r.away, 18)}${r.winner ? ` <span class="muted" style="margin-left:auto">→ ${G.clubs[r.winner].short}</span>` : ""}</div>`).join("")}</div>`;
     modal(`<span class="close-x" onclick="UI.closeModal()">×</span>${html}<button class="btn primary" style="margin-top:12px" onclick="UI.closeModal();UI.nav('${GAME.seasonOver() ? "competitions" : "match"}')">Verder ▶</button>`);
   }
 
+  const DAYS_TO_MATCH = 4; // aantal trainingsdagen dat je dag-voor-dag doorloopt vóór de wedstrijd
+  const DAY_NAMES = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
   function advanceLabel() {
     const nm = GAME.getNextUserMatch();
     if (!nm) return "Seizoen afronden";
-    if (nm.idle) return "Volgende dag";
+    const step = GAME.getState()._dayStep || 0;
+    if (step < DAYS_TO_MATCH) return "Volgende dag";
+    if (nm.idle) return "Speeldag afwerken";
     return "Naar wedstrijd";
   }
   function advance() {
@@ -9303,9 +9316,30 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     if (pend.length) { toast("Handel eerst je openstaande beslissing af."); nav("inbox"); return; }
     const nm = GAME.getNextUserMatch();
     if (!nm) { nav("competitions"); return; }
-    if (nm.idle) { simIdle(); return; }
+    const step = G._dayStep || 0;
+    if (step < DAYS_TO_MATCH) { dayReport(step); return; }   // eerst de trainingsdagen dag-voor-dag
+    if (nm.idle) { G._dayStep = 0; simIdle(); return; }
     nav("match");
   }
+  // dag-voor-dag: kort dagverslag tussen de wedstrijden door (cosmetisch — de echte weekverwerking gebeurt op de wedstrijddag)
+  function dayReport(step) {
+    const G = GAME.getState(); G._dayStep = (G._dayStep || 0) + 1; GAME.saveGame();
+    const sq = G.squads[G.clubId]; const players = sq ? sq.list.map(id => sq.players[id]).filter(Boolean) : [];
+    const focus = (G.training && G.training.focus) || (sq && sq.trainingFocus) || "algemene training";
+    const acts = ["werkt aan afronding en scherpte voor doel", "traint positiespel, pressing en omschakeling", "houdt het rustig — herstel en videosessie", "doet extra kracht-, sprint- en dueltraining", "oefent standaardsituaties (corners & vrije trappen)"];
+    const act = acts[step % acts.length];
+    const nm = GAME.getNextUserMatch(); const opp = nm && nm.fixture ? (nm.fixture.home === G.clubId ? nm.fixture.away : nm.fixture.home) : null;
+    const pl = players.length ? players[(step * 3 + 2) % players.length] : null;
+    const news = (G.inbox || []).filter(i => !i.read)[0];
+    const daysLeft = DAYS_TO_MATCH - G._dayStep;
+    modal(`<div class="dayrep"><div class="dr-top"><span class="dr-day">${DAY_NAMES[Math.min(6, step)]}</span><span class="dr-count">dag ${G._dayStep}/${DAYS_TO_MATCH} tot de wedstrijd</span></div>
+      <div class="dr-line dr-train">Training: het team ${act}.</div>
+      ${pl ? `<div class="dr-line" onclick="UI.playerCard(${pl.id})" style="cursor:pointer">${pl.name} maakt indruk op de training (${pl.ovr}).</div>` : ""}
+      ${opp && G.clubs[opp] ? `<div class="dr-line muted">Op ${DAY_NAMES[DAYS_TO_MATCH]} wacht ${G.clubs[opp].name} — bekijk het tegenstander-rapport bij Wedstrijd.</div>` : ""}
+      ${news ? `<div class="dr-line muted">Nieuws in je inbox: ${(news.title || "").replace(/^[^A-Za-z0-9]+/, "")}</div>` : ""}
+      <div class="flexbar" style="margin-top:16px;gap:8px"><button class="btn primary" onclick="UI.advance()">${daysLeft > 0 ? "Volgende dag ▶" : "Naar de wedstrijd ▶"}</button><button class="btn sm" onclick="UI.skipToMatch()">Direct naar de wedstrijd ▶</button></div></div>`, false);
+  }
+  function skipToMatch() { const G = GAME.getState(); G._dayStep = DAYS_TO_MATCH; closeModal(); advance(); }
 
   // ============================================================ COMPETITIES (stand/programma/beker/europa)
   function scrCompetitions(m) {
@@ -9570,7 +9604,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const G = GAME.getState(); const p = G.players[pid]; const win = GAME.transferWindowOpen();
     if (!p) { toast("Speler niet gevonden."); return; }
     if (p.club === G.clubId) { toast("Dit is al jouw speler."); return; }
-    const suggested = Math.round((p.value || 1) * (p.club ? 1.0 : 0.8) * 100) / 100;
+    const freeAgent = !p.club;
+    const suggested = freeAgent ? 0 : Math.round((p.value || 1) * 100) / 100;
+    const suggBonus = freeAgent ? Math.max(0.1, Math.round((p.value || 1) * 0.35 * 100) / 100) : 0; // transfervrij: tekengeld i.p.v. transfersom
     const demandWage = Math.round(D.wageFor(p.value, p.ovr) * (p.ovr >= 82 ? 1.2 : p.ovr >= 76 ? 1.1 : 1) * 10) / 10;
     const maxYears = p.age >= 32 ? 2 : p.age >= 30 ? 3 : 5;
     const yrOpts = [1, 2, 3, 4, 5].filter(y => y <= maxYears).map(y => `<option value="${y}" ${y === Math.min(4, maxYears) ? "selected" : ""}>${y} jaar</option>`).join("");
@@ -9580,12 +9616,13 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     modal(`<span class="close-x" onclick="UI.closeModal()">×</span><h3>Bod op ${p.name} ${ovrBadge(p.ovr)}</h3>
       <p class="muted" style="margin-bottom:10px">Marktwaarde ${fmtM(p.value)} · ${p.club ? G.clubs[p.club].name : "transfervrij"} · vraagt ±€${demandWage.toFixed(1)}k/wk${p.releaseClause ? " · afkoopsom " + fmtM(p.releaseClause) : ""}</p>
       ${!win.open ? `<div class="pill red" style="margin-bottom:10px">Window gesloten — bod niet mogelijk.</div>` : ""}
-      <div class="muted" style="font-weight:700;margin:4px 0 2px">1 · Clubakkoord</div>
+      <div class="muted" style="font-weight:700;margin:4px 0 2px">1 · ${freeAgent ? "Transfervrij — geen transfersom" : "Clubakkoord"}</div>
+      ${freeAgent ? `<div class="pill green" style="margin-bottom:8px">Transfervrij: je betaalt géén transfersom, alleen tekengeld + salaris.</div>` : ""}
       <div class="grid2">
-        <div class="field-row"><label>Transfersom (M€)</label><input id="bid-fee" type="number" step="0.05" value="${suggested}"></div>
-        <div class="field-row"><label>Termijnen</label><select id="bid-inst" class="live-select" style="width:100%"><option value="1">1 (ineens)</option><option value="2">2</option><option value="3">3</option></select></div>
-        <div class="field-row"><label>Doorverkoop %</label><input id="bid-sellon" type="number" step="1" value="0"></div>
-        <div class="field-row"><label>Tekenbonus (M€)</label><input id="bid-bonus" type="number" step="0.05" value="0"></div>
+        <div class="field-row"><label>Transfersom (M€)</label><input id="bid-fee" type="number" step="0.05" value="${suggested}" ${freeAgent ? "readonly title='Transfervrij — geen transfersom' style='opacity:.55'" : ""}></div>
+        <div class="field-row"><label>Termijnen</label><select id="bid-inst" class="live-select" style="width:100%" ${freeAgent ? "disabled" : ""}><option value="1">1 (ineens)</option><option value="2">2</option><option value="3">3</option></select></div>
+        <div class="field-row"><label>Doorverkoop %</label><input id="bid-sellon" type="number" step="1" value="0" ${freeAgent ? "disabled" : ""}></div>
+        <div class="field-row"><label>Tekengeld (M€)${freeAgent ? " — verplicht" : ""}</label><input id="bid-bonus" type="number" step="0.05" value="${suggBonus}"></div>
       </div>
       <div class="field-row"><label>Ruilspeler aanbieden (optioneel)</label><select id="bid-swap" class="live-select" style="width:100%">${swapOpts}</select></div>
       <div class="muted" style="font-weight:700;margin:10px 0 2px">2 · Spelerakkoord</div>
@@ -10198,7 +10235,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     addMentor, removeMentor, praise, criticize, setIndTrain, assistantAction, changeStatus, promisePT,
     promoteYouth, signYouth, fireYouthScout, openHireYouthScout, pickYouthScout, dismissIntake,
     setTactic, setTraining, setFlank, toggleOffside, setRole, setSlotRole, savePlanB, savePreset, applyPreset, switchPlan,
-    startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance,
+    startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance, skipToMatch,
     setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper, onbTour, onbDone, setExtraFilter,
     negotiateOwnContract, confirmRetire, openPress, pickPress, takeJob,
     setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch,
