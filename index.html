@@ -6302,6 +6302,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     if (type === "league") processPlaytimeComplaints();
     if (type === "league") {
       internationalBreak();                                 // interlandperiodes: oproepen + WK/EK
+      advisorAlerts();                                      // proactieve adviseur: pusht actiepunten naar de inbox
       tickStadiumBuild();                                   // stadionverbouwing vordert per speelweek
       if (global.SCOUT) {                                   // scouting: focuses vorderen wekelijks, maandbudget per ~4 weken
         global.SCOUT.tickFocuses(G);
@@ -6390,6 +6391,26 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       star.morale = Math.min(100, (star.morale || 60) + 5); star.caps = (star.caps || 0) + 3;
       addInbox(tour + " gespeeld", `${tour} is afgelopen! ${star.name} maakte indruk namens ${star.nat} en werd in het toernooi-elftal gekozen. Hij keert met extra vertrouwen terug.`, { from: "Technische staf" });
     }
+  }
+  // PROACTIEVE ADVISEUR — pusht belangrijke actiepunten naar de inbox (met dedup-guards, geen spam)
+  function advisorAlerts() {
+    if (!G.advisorSent) G.advisorSent = {};
+    const sq = G.squads[G.clubId]; if (!sq) return;
+    const mine = sq.list.map(id => sq.players[id]).filter(Boolean);
+    // aflopend contract van een sterkhouder
+    mine.filter(p => (p.ovr || 0) >= 76 && (p.contract || 0) <= 1 && !p.loanedFrom).slice(0, 1).forEach(p => {
+      const key = "exp_" + p.id + "_" + G.season;
+      if (!G.advisorSent[key]) { G.advisorSent[key] = 1; addInbox("Advies: verleng " + p.name, `${p.name} (OVR ${p.ovr}) speelt zijn laatste contractjaar. Verleng nu — anders raak je hem straks (bijna) gratis kwijt. Regel het in het Actiecentrum of via zijn spelerkaart.`, { from: "Technisch directeur" }); }
+    });
+    // dun bezette positie (1x per seizoen)
+    const byPos = {}; mine.forEach(p => { byPos[p.pos] = (byPos[p.pos] || 0) + 1; });
+    const thin = Object.keys(byPos).filter(k => byPos[k] < 2);
+    if (thin.length) { const key = "thin_" + G.season; if (!G.advisorSent[key]) { G.advisorSent[key] = 1; addInbox("Advies: dun bezette positie", `Je hebt te weinig spelers op: ${thin.join(", ")}. Versterk in de transfermarkt of promoveer een talent uit de jeugd.`, { from: "Technisch directeur" }); } }
+    // toptalent dat nauwelijks speelt (na de winterstop)
+    if (G.week >= 20) mine.filter(p => (p.age || 30) <= 20 && ((p.pot || 0) - (p.ovr || 0)) >= 6 && (p.sApps || 0) <= 2).slice(0, 1).forEach(p => {
+      const key = "loan_" + p.id + "_" + G.season;
+      if (!G.advisorSent[key]) { G.advisorSent[key] = 1; addInbox("Advies: verhuur " + p.name + "?", `${p.name} (${p.age}j, potentie ${p.pot}) speelt nauwelijks (${p.sApps || 0} duels). Een verhuurperiode geeft hem speelminuten en versnelt zijn groei.`, { from: "Hoofd jeugdopleiding" }); }
+    });
   }
   function updateHonours(s) {                                   // erelijst (#124)
     if (!G.records) return; const id = G.clubId;
@@ -11046,6 +11067,21 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       }
       scored.sort(function (a, b) { return b.ratio - a.ratio; });
 
+      // Actie-knoppen per speler (andere club = koopje). event.stopPropagation zodat
+      // de rij-onclick (playerCard) niet ook afgaat. Guard: alleen bij geldig id.
+      function actBtns(pl) {
+        if (!pl || pl.id == null) return "";
+        var id = pl.id;
+        if (pl.club === G.clubId) return ""; // eigen speler = geen bod/scout
+        return (
+          '<span class="br-acts" style="display:inline-flex;gap:5px;margin-left:8px">' +
+          '<button class="btn sm" onclick="event.stopPropagation();UI.openBuy(' + id + ')">Bod</button>' +
+          '<button class="btn sm" onclick="event.stopPropagation();UI.doScout(' + id + ')">Scout</button>' +
+          '<button class="btn sm" onclick="event.stopPropagation();UI.toggleShortlist(' + id + ')">Shortlist</button>' +
+          '</span>'
+        );
+      }
+
       var html = U.topbar("Koopjesradar", "Beste waarde per euro");
 
       if (!scored.length) {
@@ -11082,7 +11118,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         '<div style="text-align:right">' +
         '<div style="font-weight:600">' + U.fmtM(best.val) + '</div>' +
         (best.val <= budget ? '<span class="pill green">Past in budget</span>' : '<span class="pill red">Te duur</span>') +
-        '</div></div></div>';
+        '</div></div>' +
+        (actBtns(bp) ? '<div style="margin-top:10px;text-align:right">' + actBtns(bp) + '</div>' : '') +
+        '</div>';
 
       // Ranglijst met koopje-balk (genormaliseerd op de beste ratio)
       var maxRatio = best.ratio || 1;
@@ -11112,6 +11150,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<div style="font-weight:600">' + U.fmtM(s.val) + '</div>' +
           '<div style="margin-top:3px">' + pill + '</div>' +
           '</div>' +
+          actBtns(p) +
           '</div>';
       }
 
@@ -13025,12 +13064,17 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         var clause = (typeof p.releaseClause === "number" && p.releaseClause > 0)
           ? '<span class="pill green" style="font-size:11px;margin-left:6px">Clausule ' + U.fmtM(p.releaseClause) + '</span>'
           : '';
+        // Actie-knop: verleng contract van deze EIGEN speler (alleen bij geldig id)
+        var renewBtn = (p.id != null)
+          ? '<button class="btn sm" style="margin-left:8px" onclick="event.stopPropagation();UI.doRenew(' + p.id + ')">Verleng</button>'
+          : '';
         return '<div class="cx-row" onclick="UI.playerCard(' + p.id + ')">' +
           '<div class="flexbar">' +
           '<span><span class="cx-dot" style="background:' + r.col + '"></span>' +
           U.ovrMini(p.ovr) + ' ' + U.posChip(p.pos) + ' <b>' + U.lastName(p.name) + '</b></span>' +
           '<span class="spacer"></span>' +
           '<span class="pill ' + r.pill + '" style="font-size:11px">' + r.txt + '</span>' +
+          renewBtn +
           '</div>' +
           '<div class="flexbar" style="margin-top:4px;font-size:12px">' +
           '<span class="muted cx-num">Contract: ' + yrsLabel(row.yrs) + '</span>' +
@@ -13138,12 +13182,17 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           ? '<span class="pill gold" style="font-size:11px;margin-left:6px">Sterkhouder</span>'
           : '';
         var statusTxt=p.squadStatus?('<span class="muted" style="font-size:11px;margin-left:6px">'+p.squadStatus+'</span>'):'';
+        // Verleng-knop alleen voor EIGEN spelers met geldig id (p.club === G.clubId).
+        var renewBtn=(p.id!=null && G.clubId!=null && p.club===G.clubId && UI.doRenew)
+          ? '<button class="btn sm" style="margin-left:8px" onclick="event.stopPropagation();UI.doRenew('+p.id+')">Verleng</button>'
+          : '';
         return '<div class="cq-row" onclick="UI.playerCard('+p.id+')">' +
           '<div class="flexbar">' +
             '<span><span class="cq-dot" style="background:'+u.col+'"></span>' +
             U.ovrMini(p.ovr||0)+' '+U.posChip(p.pos||"")+' <b>'+U.lastName(p.name||"?")+'</b>'+keyTag+'</span>' +
             '<span class="spacer"></span>' +
             '<span class="pill '+u.pill+'" style="font-size:11px">'+u.txt+'</span>' +
+            renewBtn +
           '</div>' +
           '<div class="flexbar" style="margin-top:4px;font-size:12px">' +
             '<span class="muted cq-num">Contract: '+yrsLabel(row.yrs)+'</span>' +
@@ -15329,6 +15378,12 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       '<span class="muted" style="font-size:11px;margin-left:5px">loon</span>' +
       '</div>' +
       '<div class="fa-bar"><div class="fa-fill" style="width:' + pct.toFixed(1) + '%;background:' + col + '"></div></div>' +
+      (p.id != null ?
+        '<div class="flexbar" style="margin-top:6px">' +
+        '<span class="spacer"></span>' +
+        '<button class="btn sm" onclick="event.stopPropagation();UI.toggleShortlist(' + p.id + ')">Shortlist</button>' +
+        '<button class="btn sm" style="margin-left:6px" onclick="event.stopPropagation();UI.openBuy(' + p.id + ')">Aantrekken</button>' +
+        '</div>' : '') +
       '</div>';
   }
 
@@ -17740,7 +17795,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           (loanCands.length && !canLoan ? "<p class='muted' style='font-size:11px;margin-bottom:0'>Verhuren kan via het spelerskaartje wanneer de transferwindow open is.</p>" : "") +
           '</div>' +
           '<div class="panel"><h3>⚽ Overige talenten</h3>' +
-          (others.length ? others.map(function (p) { return playRow(p, false); }).join("") : "<p class='muted'>Geen andere talenten.</p>") +
+          (others.length ? others.map(function (p) { return playRow(p, true); }).join("") : "<p class='muted'>Geen andere talenten.</p>") +
           '</div>';
       }
 
@@ -19058,6 +19113,20 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       var players=G.players||{};
       var ids=sc.prospects||[];
 
+      // Set van eigen jeugd-id's: alleen daarvoor is UI.promoteYouth geldig
+      // (game.js promoteYouth eist dat de speler in G.youth.players zit).
+      var youthSet={};
+      var yl=(G.youth&&G.youth.players)||[];
+      for(var yi=0;yi<yl.length;yi++) youthSet[yl[yi]]=true;
+
+      // knop per prospect: jeugdspeler -> Promoveer, anders -> Bekijk
+      function actieKnop(p){
+        if(!p||p.id==null) return "";
+        if(youthSet[p.id])
+          return '<button class="btn sm" onclick="event.stopPropagation();UI.promoteYouth('+p.id+')">Promoveer</button>';
+        return '<button class="btn sm" onclick="event.stopPropagation();UI.playerCard('+p.id+')">Bekijk</button>';
+      }
+
       // prospects ophalen (id -> speler), ontbrekende overslaan, sorteren op potentie
       var pros=[];
       for(var i=0;i<ids.length;i++){
@@ -19102,11 +19171,12 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
               '<div class="mp-bar"><i style="width:'+k+'%;background:'+knowColor(k)+'"></i></div>'+
             '</td>'+
             '<td class="tbl-num">'+(U.fmtM?U.fmtM(p.value||0):("€"+(p.value||0)))+'</td>'+
+            '<td class="tbl-num">'+actieKnop(p)+'</td>'+
             '</tr>';
         }).join("");
         tabel='<div class="tbl-scroll"><table>'+
           '<thead><tr><th>Pos</th><th>Naam</th><th class="tbl-num">Lft</th><th class="tbl-num">OVR</th>'+
-          '<th class="tbl-num">Potentie</th><th class="tbl-num">Kennis</th><th class="tbl-num">Waarde</th></tr></thead>'+
+          '<th class="tbl-num">Potentie</th><th class="tbl-num">Kennis</th><th class="tbl-num">Waarde</th><th class="tbl-num">Actie</th></tr></thead>'+
           '<tbody>'+rows+'</tbody></table></div>'+
           '<p class="muted" style="font-size:11px;margin-top:6px">Potentie is een <b>schatting-range</b> zolang je nog niet volledig scout; hoe hoger het kennis-percentage, hoe smaller (zekerder) de range. Klik op een naam voor de spelerskaart.</p>';
       } else {
@@ -21268,6 +21338,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<span class="muted" style="font-size:12px;min-width:120px">' + lbl + '</span>' +
           '<span class="muted" style="font-size:12px">pot ' + U.potDisplay(p) + '</span>' +
           '<span class="spacer"></span>' + gapPill(p._gap) +
+          (p.id != null ? ' <button class="btn sm" onclick="event.stopPropagation();UI.promoteYouth(' + p.id + ')">Promoveer</button>' : '') +
           '</div>';
       };
 
@@ -21557,6 +21628,20 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ? '<span class="muted" style="font-size:11px;margin-left:5px">pot ' + p.pot + '</span>'
       : '';
 
+    // Actie-knoppen: alleen tonen als het speler-id bestaat (spelers van andere clubs).
+    var actions = "";
+    if (p.id != null) {
+      var clauseBtn = r.afford
+        ? '<button class="btn sm" onclick="event.stopPropagation();UI.buyClause(' + p.id + ')">Afkoopsom betalen</button>'
+        : '';
+      actions =
+        '<div class="flexbar" style="margin-top:6px">' +
+        '<span class="spacer"></span>' +
+        clauseBtn +
+        '<button class="btn sm" style="margin-left:6px" onclick="event.stopPropagation();UI.openBuy(' + p.id + ')">Bod</button>' +
+        '</div>';
+    }
+
     return '<div class="rc-row" onclick="UI.playerCard(' + p.id + ')">' +
       '<div class="flexbar">' +
       '<span>' + U.ovrMini(p.ovr || 0) + ' ' + U.posChip(p.pos || "") + ' <b>' + U.lastName(p.name || "?") + '</b>' + pot + '</span>' +
@@ -21569,6 +21654,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       '<span class="muted rc-num" style="font-size:11px">waarde ' + U.fmtM(r.value) + '</span>' +
       '<span class="rc-num" style="font-weight:700;color:' + clauseCol + ';margin-left:8px">' + U.fmtM(r.clause) + '</span>' +
       '</div>' +
+      actions +
       '</div>';
   }
 })();
@@ -21712,6 +21798,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
             var diff = oOvr - outOvr;
             var diffLbl = (diff > 0 ? "+" + diff : "" + diff);
             var src = sourceOf(o, transferSet);
+            // Actie-knoppen: Bod (biedmodal) + Scout (scouten). Alleen tonen als id bestaat.
+            var acts = "";
+            if (o.id != null) {
+              acts =
+                '<div style="display:flex;gap:6px;margin-top:5px">' +
+                '<button class="btn sm" onclick="event.stopPropagation();UI.openBuy(' + o.id + ')">Bod</button>' +
+                '<button class="btn sm" onclick="event.stopPropagation();UI.doScout(' + o.id + ')">Scout</button>' +
+                '</div>';
+            }
             block +=
               '<div class="rf-opt" onclick="UI.playerCard(' + o.id + ')">' +
               U.ovrMini(oOvr) + ' ' + U.posChip(o.pos || "?") +
@@ -21722,7 +21817,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
               (o.age || "?") + ' jr</div>' +
               '</div>' +
               '<span class="spacer"></span>' +
-              '<div style="text-align:right"><div style="font-weight:700">' + U.fmtM(o.value || 0) + '</div></div>' +
+              '<div style="text-align:right"><div style="font-weight:700">' + U.fmtM(o.value || 0) + '</div>' +
+              acts +
+              '</div>' +
               '</div>';
           }
         }
@@ -22604,6 +22701,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     icon:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20.5 20.5" stroke-width="2"/>',
     render:function(m, GAME){
       var G=GAME.getState()||{};
+      var players=G.players||{};
       var sc=G.scouting||{};
       var focuses=(sc.focuses||[]);
       var scouts=(sc.scouts||[]);
@@ -22645,10 +22743,25 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           var scoutTxt=scout
             ? '<span title="Toegewezen scout">'+scout.name+' <span class="muted" style="font-size:11px">(JPP '+(scout.jpp||0)+')</span></span>'
             : '<span class="muted">geen scout toegewezen</span>';
-          var gevonden=(f.found||[]).length;
+          var foundIds=(f.found||[]);
+          var gevonden=foundIds.length;
           var statusPill=f.done
             ? '<span class="pill green">Afgerond</span>'
             : '<span class="pill '+pi.cls+'">'+pi.lbl+'</span>';
+          // Gescoute namen met directe acties (Bekijk = spelerkaart, Shortlist = op/afwaarderen)
+          var foundBlok="";
+          var nameRows=foundIds.map(function(pid){
+            var p=(pid!=null)?players[pid]:null;
+            if(!p||p.id==null) return "";
+            var meta=(p.pos!=null?p.pos+" · ":"")+(p.age!=null?p.age+"j":"");
+            return '<div class="flexbar" style="padding:4px 0;font-size:12px;border-top:1px solid rgba(255,255,255,.05)">'+
+                '<span><b>'+(p.name||"Speler")+'</b>'+(meta?' <span class="muted">'+meta+'</span>':"")+'</span>'+
+                '<span class="spacer"></span>'+
+                '<button class="btn sm" onclick="event.stopPropagation();UI.playerCard('+p.id+')">Bekijk</button> '+
+                '<button class="btn sm" onclick="event.stopPropagation();UI.toggleShortlist('+p.id+')" title="Op/van shortlist zetten">☆ Shortlist</button>'+
+              '</div>';
+          }).join("");
+          if(nameRows) foundBlok='<div style="margin-top:6px">'+nameRows+'</div>';
           return '<div class="panel" style="margin:0">'+
             '<div class="flexbar"><b>'+(f.name||"Opdracht")+'</b><span class="spacer"></span>'+statusPill+'</div>'+
             '<div class="sp-bar"><i style="width:'+pct+'%;background:'+col+'"></i></div>'+
@@ -22656,6 +22769,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
               '<span class="spacer"></span><span class="muted">'+gevonden+' gevonden</span></div>'+
             '<div class="flexbar" style="padding-top:6px;font-size:12px"><span class="muted">Scout</span>'+
               '<span class="spacer"></span>'+scoutTxt+'</div>'+
+            foundBlok+
             '</div>';
         }).join("");
         focusBlok='<div class="grid2">'+focusBlok+'</div>';
@@ -23203,6 +23317,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       html += rows.map(function (row) {
         var p = row.p, v = row.v, val = p.value || 0;
         var pct = Math.max(3, Math.min(100, row.idx));
+        var sellBtn = (p.id != null)
+          ? '<button class="btn sm" style="margin-left:8px" onclick="event.stopPropagation();UI.openSell(' + p.id + ')">Zet te koop</button>'
+          : '';
         return '<div class="sc-row" onclick="UI.playerCard(' + p.id + ')">' +
           '<div class="flexbar">' +
           '<span><span class="sc-dot" style="background:' + v.col + '"></span>' +
@@ -23210,6 +23327,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           statusTag(p) + '</span>' +
           '<span class="spacer"></span>' +
           '<span class="pill ' + v.pill + '" style="font-size:11px">' + v.txt + '</span>' +
+          sellBtn +
           '</div>' +
           '<div class="flexbar" style="margin-top:4px;font-size:12px">' +
           '<span class="muted sc-num">' + (p.age || "?") + ' jaar &middot; contract ' + contractLabel(p.contract) + '</span>' +
@@ -23642,6 +23760,10 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         if(r.n<r.min) tags+='<span class="pill red" style="font-size:11px;margin-left:6px">dun bezet ('+r.n+'/'+r.min+')</span>';
         if(r.aging>0) tags+='<span class="muted" style="font-size:11px;margin-left:6px">'+r.aging+'× 31+</span>';
         if(r.expiring>0) tags+='<span class="pill gold" style="font-size:11px;margin-left:6px">'+r.expiring+'× aflopend</span>';
+        // Actie-knop: alleen bij linies die versterking nodig hebben (rood/oranje)
+        var actie=(v.key==="rood"||v.key==="oranje")
+          ? '<button class="btn sm" style="margin-left:8px" onclick="event.stopPropagation();UI.nav(\'transfers\')">Zoek in transfermarkt</button>'
+          : '';
 
         return '<div class="sn-line">'+
           '<div class="flexbar">'+
@@ -23649,6 +23771,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<span class="muted sn-num" style="font-size:12px">'+r.n+' speler'+(r.n===1?'':'s')+'</span></span>'+
           '<span class="spacer"></span>'+
           '<span class="pill '+v.pill+'" style="font-size:11px">'+v.txt+'</span>'+
+          actie+
           '</div>'+
           '<div class="flexbar" style="margin-top:5px;font-size:12px">'+
           '<span class="muted">Gem. OVR</span>'+
@@ -23688,6 +23811,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
             '<span class="muted" style="font-size:12px;text-align:right">'+f.txt+'</span>'+
             '</div>';
         }).join("");
+        html+='<div style="margin-top:12px;text-align:right"><button class="btn primary sm" onclick="UI.nav(\'transfers\')">Zoek in transfermarkt</button></div>';
       } else {
         html+="<p class='muted'>Alle linies zijn op orde — geen dringende versterking nodig.</p>";
       }
@@ -24432,6 +24556,18 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     render:function(m, GAME){
       var G=(GAME && GAME.getState && GAME.getState()) || {};
       var allPlayers=G.players||{};
+      var myClub=G.clubId;
+
+      // ---- Actie-knoppen per speler: eigen talent -> Bekijk; ander club -> Bod/Scout ----
+      function actBtns(p){
+        if(!p || p.id==null) return "";
+        var id=p.id;
+        if(p.club===myClub){
+          return '<button class="btn sm" onclick="event.stopPropagation();UI.playerCard('+id+')">Bekijk</button>';
+        }
+        return '<button class="btn primary sm" onclick="event.stopPropagation();UI.openBuy('+id+')">Bod</button> '+
+               '<button class="btn sm" onclick="event.stopPropagation();UI.doScout('+id+')">Scout</button>';
+      }
 
       // ---- Verzamel U21-spelers: eigen selectie + jeugdafdeling, dedupe op id ----
       var seen={};
@@ -24500,7 +24636,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
             '<span class="muted" style="font-size:12px">'+U.posChip(p.pos||"?")+' · '+(p.age||0)+'j</span></span>'+
             '<span class="spacer"></span>'+
             '<span class="pill gold" style="margin-right:6px" title="groeimarge">+'+r.growth+' groei</span>'+
-            '<span class="pill green" title="waarde per potentiepunt">'+U.fmtM(r.vpp)+'/pot</span>'+
+            '<span class="pill green" style="margin-right:8px" title="waarde per potentiepunt">'+U.fmtM(r.vpp)+'/pot</span>'+
+            actBtns(p)+
             '</div>';
         }).join("");
       } else {
@@ -24527,12 +24664,13 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
             '<td class="tbl-num" style="min-width:80px">'+U.fmtM(r.val)+
               '<div class="tv-bar"><i style="width:'+pct+'%"></i></div></td>'+
             '<td class="tbl-num tv-vpp" style="color:'+(cheap?"var(--accent)":"var(--muted)")+'">'+U.fmtM(r.vpp)+'</td>'+
+            '<td class="tbl-num" style="white-space:nowrap">'+actBtns(p)+'</td>'+
             '</tr>';
         }).join("");
         html+='<div class="tbl-scroll"><table><thead><tr>'+
           '<th>Speler</th><th>Pos</th><th class="tbl-num">Lft</th><th class="tbl-num">OVR</th>'+
           '<th class="tbl-num">Pot</th><th class="tbl-num">Groei</th><th class="tbl-num">Waarde</th>'+
-          '<th class="tbl-num">Waarde/pot</th>'+
+          '<th class="tbl-num">Waarde/pot</th><th class="tbl-num">Actie</th>'+
           '</tr></thead><tbody>'+body+'</tbody></table></div>';
       } else {
         html+="<p class='muted'>Nog geen jong talent (t/m 21j) in je selectie of jeugdafdeling.</p>";
@@ -24756,6 +24894,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         var clubName = club2 ? club2.name : "Onbekende club";
         var badge = club2 ? U.clubBadge(cid2, 22) : "";
         var grow = Math.max(0, (t.pot || 0) - (t.ovr || 0));
+        // Actie-knoppen: alleen voor talenten van ANDERE clubs (scout + shortlist)
+        var actBtns = "";
+        if (t.id != null && cid2 != null && cid2 !== G.clubId) {
+          actBtns =
+            '<div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end">' +
+            '<button class="btn sm" onclick="event.stopPropagation();UI.doScout(' + t.id + ')">Scout</button>' +
+            '<button class="btn sm" onclick="event.stopPropagation();UI.toggleShortlist(' + t.id + ')">Shortlist</button>' +
+            '</div>';
+        }
         rows +=
           '<div class="tal-row" onclick="UI.playerCard(' + t.id + ')">' +
           '<span class="tal-rk">' + (k + 1) + '</span>' +
@@ -24769,6 +24916,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<div style="text-align:right">' +
           '<div><span class="pill gold" title="potentie">POT ' + (t.pot || 0) + '</span></div>' +
           '<div class="tal-grow" style="margin-top:4px" title="groeimarge (potentie - huidig)">+' + grow + ' groei</div>' +
+          actBtns +
           '</div>' +
           '</div>';
       }
@@ -25545,6 +25693,18 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         return out;
       }
 
+      // Actie-knoppen per speler. Eigen speler (p.club === clubId) -> te koop zetten;
+      // speler van een andere club -> scouten of een bod uitbrengen.
+      var myId = G.clubId;
+      function actionHtml(pl) {
+        if (!pl || pl.id == null) return "";
+        if (pl.club != null && pl.club === myId) {
+          return '<button class="btn sm" onclick="event.stopPropagation();UI.openSell(' + pl.id + ')">Zet te koop</button>';
+        }
+        return '<button class="btn sm" onclick="event.stopPropagation();UI.doScout(' + pl.id + ')">Scout</button>' +
+          ' <button class="btn primary sm" onclick="event.stopPropagation();UI.openBuy(' + pl.id + ')">Bod</button>';
+      }
+
       // Heetste gerucht van het moment
       var top = rumours[0];
       var tp = top.p;
@@ -25562,6 +25722,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         '</div>' +
         '<div class="ru-sub" style="margin-top:8px">Gelinkt aan: </div>' +
         '<div style="margin-top:2px">' + suitHtml(top.suit) + '</div>' +
+        '<div style="margin-top:10px">' + actionHtml(tp) + '</div>' +
         '</div>';
 
       // Volledige geruchtenlijst
@@ -25585,7 +25746,9 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<div class="ru-heat"><div class="ru-heatf" style="width:' + pct + '%"></div></div>' +
           '</div>' +
           '<span class="spacer"></span>' +
-          '<div style="text-align:right;white-space:nowrap">' + reasonHtml(r) + '</div>' +
+          '<div style="text-align:right;white-space:nowrap">' + reasonHtml(r) +
+          '<div style="margin-top:6px">' + actionHtml(p) + '</div>' +
+          '</div>' +
           '</div>';
       }
 
@@ -25669,6 +25832,14 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         var pill = fits
           ? '<span class="pill green">Past in budget</span>'
           : '<span class="pill red">Te duur</span>';
+        var actions = "";
+        if (t.id != null) {
+          actions =
+            '<div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">' +
+            '<button class="btn sm" onclick="event.stopPropagation();UI.openBuy(' + t.id + ')">Bod</button>' +
+            '<button class="btn sm" onclick="event.stopPropagation();UI.toggleShortlist(' + t.id + ')">Van shortlist</button>' +
+            '</div>';
+        }
         rows +=
           '<div class="tt-row" onclick="UI.playerCard(' + t.id + ')">' +
           U.ovrBadge(t.ovr || 0) + ' ' + U.posChip(pos) +
@@ -25680,6 +25851,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<div style="text-align:right">' +
           '<div style="font-weight:600">' + U.fmtM(val) + '</div>' +
           '<div style="margin-top:3px">' + pill + '</div>' +
+          actions +
           '</div>' +
           '</div>';
       }
@@ -25755,6 +25927,20 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       var bench=rows.filter(function(r){ return r.bench; }).slice();
       bench.sort(function(a,b){ return (b.p.ovr||0)-(a.p.ovr||0); });
 
+      // Actie-knoppen per speler. Deze parels komen uit U.players() (= eigen kader),
+      // dus normaal p.club===myId -> Zet te koop / Verleng. Voor het geval een
+      // andere-club-speler opduikt (defensief), tonen we Bod / Scout.
+      function actionBtns(p){
+        if(!p || p.id==null) return '';
+        var id=p.id;
+        if(p.club===myId){
+          return '<button class="btn warn sm" onclick="event.stopPropagation();UI.openSell('+id+')">Zet te koop</button> ' +
+                 '<button class="btn blue sm" onclick="event.stopPropagation();UI.doRenew('+id+')">Verleng</button>';
+        }
+        return '<button class="btn primary sm" onclick="event.stopPropagation();UI.openBuy('+id+')">Bod</button> ' +
+               '<button class="btn sm" onclick="event.stopPropagation();UI.doScout('+id+')">🔍 Scout</button>';
+      }
+
       function ratioPill(r){
         var cls = (med>0 && r.ratio>=med) ? "green" : "";
         return '<span class="pill '+cls+'">'+r.ratio.toFixed(1)+'</span>';
@@ -25774,6 +25960,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<td class="tbl-num">'+U.fmtM(p.value||0)+'</td>' +
           '<td style="min-width:80px">'+bar(r)+'</td>' +
           '<td class="tbl-num gem-ratio">'+ratioPill(r)+'</td>' +
+          '<td style="white-space:nowrap">'+actionBtns(p)+'</td>' +
           '</tr>';
       }
 
@@ -25785,6 +25972,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<span class="spacer"></span>' +
           (r.growth>0?'<span class="pill gold" style="margin-right:6px">+'+r.growth+' groei</span>':'') +
           U.ovrBadge(p.ovr||0) +
+          '<span style="margin-left:8px;white-space:nowrap">'+actionBtns(p)+'</span>' +
           '</div>';
       }
 
@@ -25800,7 +25988,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         '<p class="muted" style="margin:-4px 0 8px">Ratio = (OVR + halve groeimarge) per miljoen marktwaarde. Hoger = meer waar voor je geld.</p>';
       if(rows.length){
         html += '<div class="tbl-scroll"><table><thead><tr>' +
-          '<th>Speler</th><th>OVR</th><th>Groei</th><th class="tbl-num">Waarde</th><th>Ratio</th><th class="tbl-num">/€M</th>' +
+          '<th>Speler</th><th>OVR</th><th>Groei</th><th class="tbl-num">Waarde</th><th>Ratio</th><th class="tbl-num">/€M</th><th>Actie</th>' +
           '</tr></thead><tbody>' +
           rows.slice(0,15).map(gemRow).join("") +
           '</tbody></table></div>';
@@ -26023,6 +26211,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         return U.clubBadge(cid, 18) + ' <span class="muted" style="font-size:12px">' + (c.short || c.name || "?") + '</span>';
       }
 
+      function actionBtn(p) {
+        if (p == null || p.id == null) return "";
+        // Eigen speler -> te koop zetten; andere club -> scouten.
+        if (p.club != null && myId != null && p.club === myId) {
+          return '<button class="btn sm" onclick="event.stopPropagation();UI.openSell(' + p.id + ')">Zet te koop</button>';
+        }
+        return '<button class="btn sm" onclick="event.stopPropagation();UI.doScout(' + p.id + ')">Scout</button>';
+      }
+
       function riserRow(it, idx) {
         var p = it.p;
         var start = (p.seasonStartOvr != null) ? p.seasonStartOvr : (p.ovr || 0);
@@ -26035,13 +26232,14 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<td><div class="flexbar"><span class="vr-gain">+' + it.gain + '</span><span class="vr-bar" style="margin-left:8px"><i style="width:' + w + '%"></i></span></div></td>' +
           '<td>' + crestName(it.cid) + '</td>' +
           '<td class="tbl-num"><span class="pill gold">' + U.fmtM(p.value || 0) + '</span></td>' +
+          '<td class="tbl-num">' + actionBtn(p) + '</td>' +
           '</tr>';
       }
 
       html += '<div class="panel"><h3>📈 Grootste stijgers (koopdoelen)</h3>';
       if (top.length) {
         html += '<div class="tbl-scroll"><table><thead><tr>' +
-          '<th>#</th><th>Speler</th><th>Pos</th><th>OVR</th><th>Winst</th><th>Club</th><th class="tbl-num">Waarde</th>' +
+          '<th>#</th><th>Speler</th><th>Pos</th><th>OVR</th><th>Winst</th><th>Club</th><th class="tbl-num">Waarde</th><th class="tbl-num">Actie</th>' +
           '</tr></thead><tbody>' +
           top.map(function (it, i) { return riserRow(it, i); }).join("") +
           '</tbody></table></div>' +
@@ -26651,8 +26849,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       m.innerHTML=
         U.topbar("Jeugdscout-netwerk","Je jeugdscouts, hun regio's en talent-oog — read-only")+
         kpis+
-        '<div class="panel"><h3>🔍 Jeugdscouts</h3>'+scoutBlok+'</div>'+
-        '<div class="panel"><h3>🌱 Aangedragen talenten</h3>'+prosBlok+'</div>';
+        '<div class="panel"><h3 style="display:flex;align-items:center;gap:8px">🔍 Jeugdscouts'+
+          '<span class="spacer" style="flex:1"></span>'+
+          '<button class="btn sm" onclick="UI.nav(\'scouting\')">Naar scouting</button>'+
+          '<button class="btn sm" onclick="UI.nav(\'jeugd\')">Naar jeugd</button>'+
+        '</h3>'+scoutBlok+'</div>'+
+        '<div class="panel"><h3 style="display:flex;align-items:center;gap:8px">🌱 Aangedragen talenten'+
+          '<span class="spacer" style="flex:1"></span>'+
+          '<button class="btn sm" onclick="UI.nav(\'jeugd\')">Naar jeugd</button>'+
+        '</h3>'+prosBlok+'</div>';
     }
   });
 })();
@@ -27029,6 +27234,18 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         flag = '<span class="pill">Aandacht</span>';
       }
 
+      // Actie-knop: jonge spelers (<=21, niet gehuurd) beter verhuren voor ervaring,
+      // anderen te koop zetten. Alleen tonen als het id geldig is.
+      var actie = "";
+      if (p.id != null) {
+        var jong = (p.age != null && p.age <= 21 && !p.loanedFrom);
+        if (jong) {
+          actie = '<button class="btn sm" onclick="event.stopPropagation();UI.loanOut(' + p.id + ')">Verhuur</button>';
+        } else {
+          actie = '<button class="btn warn sm" onclick="event.stopPropagation();UI.openSell(' + p.id + ')">Zet te koop</button>';
+        }
+      }
+
       return '<tr style="cursor:pointer" onclick="UI.playerCard(' + p.id + ')">' +
         '<td>' + U.posChip(p.pos || "") + '</td>' +
         '<td><b>' + U.lastName(p.name || "") + '</b></td>' +
@@ -27042,6 +27259,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '</div>' +
         '</td>' +
         '<td style="text-align:right">' + flag + '</td>' +
+        '<td style="text-align:right">' + actie + '</td>' +
         '</tr>';
     }).join("");
 
@@ -27052,6 +27270,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           '<th>Pos</th><th>Speler</th><th style="text-align:center">OVR</th>' +
           '<th>Rol</th><th style="text-align:center">Duels</th>' +
           '<th>Tevredenheid</th><th style="text-align:right">Risico</th>' +
+          '<th style="text-align:right">Actie</th>' +
         '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div></div>';
