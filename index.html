@@ -407,6 +407,25 @@ tbody tr:last-child td{border-bottom:none}
 .dr-count{font-size:11px;color:var(--accent,#16e58f);font-weight:700}
 .dr-line{padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:6px;font-size:13px;line-height:1.4}
 .dr-line.dr-train{border-color:rgba(22,229,143,.25);background:linear-gradient(160deg,rgba(22,229,143,.09),rgba(255,255,255,.02))}
+/* visuele onderhandeling */
+.bid-head{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+.bid-head svg{flex:0 0 auto}
+.bid-head-txt{min-width:0}
+.bid-free{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;background:rgba(22,229,143,.18);color:var(--accent,#16e58f);border:1px solid rgba(22,229,143,.4)}
+.bid-stance{margin-bottom:12px}
+.stance{margin-bottom:8px}
+.stance-h{display:flex;align-items:center;font-size:12px;margin-bottom:4px}
+.stance-bar{height:9px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+.stance-bar i{display:block;height:100%;border-radius:5px;transition:width .3s ease-out}
+/* visuele bestuursvergadering */
+.meeting{min-width:290px;position:relative}
+.mtg-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.mtg-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display,inherit);font-weight:900;font-size:16px;background:linear-gradient(160deg,#2a3550,#0e1420);border:2px solid var(--gold,#f0c040);color:var(--gold,#f0c040);flex:0 0 auto}
+.mtg-role{font-weight:800;font-size:14px}
+.mtg-bubble{padding:11px 14px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font-size:13px;line-height:1.5;margin-bottom:12px}
+.mtg-bubble.reply{border-radius:14px 14px 4px 14px;background:linear-gradient(160deg,rgba(22,229,143,.12),rgba(255,255,255,.02));border-color:rgba(22,229,143,.28);margin-top:12px}
+.mtg-conf{margin-bottom:4px}
+.mtg-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 /* competitie-statistieken + programma */
 .stat-tbl{width:100%;border-collapse:collapse;margin-top:4px}
 .stat-tbl td{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
@@ -8145,7 +8164,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
         <div class="home-side">
           <div class="panel"><h3>Doel bestuur</h3><p style="font-size:15px;margin-bottom:10px">${cap(G.objective.text)}</p>
             <div class="muted" style="font-size:12px">Vertrouwen bestuur</div><div class="bar-meter"><i style="width:${Math.round(G.jobSecurity)}%;background:${G.jobSecurity >= 50 ? "var(--accent)" : "var(--bad)"}"></i></div>
-            <p class="muted" style="margin-top:12px;font-size:12px;line-height:1.7">${cupLine}<br>${euroLine}<br>Topscorer: <b style="color:var(--txt)">${topScorer ? topScorer.name + " (" + topScorer.sGoals + ")" : "—"}</b></p></div>
+            <p class="muted" style="margin-top:12px;font-size:12px;line-height:1.7">${cupLine}<br>${euroLine}<br>Topscorer: <b style="color:var(--txt)">${topScorer ? topScorer.name + " (" + topScorer.sGoals + ")" : "—"}</b></p>
+            <button class="btn blue sm" style="margin-top:10px" onclick="UI.boardMeeting()">🪑 Bestuursvergadering</button></div>
           <div class="panel"><h3>Laatste nieuws</h3><div class="news-feed">${newsFeed(G)}</div></div>
         </div>
       </div>
@@ -9613,13 +9633,15 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const roleOpts = ["Belangrijke speler", "Sterspeler", "Rotatiespeler", "Talent voor de toekomst"].map(r => `<option value="${r}">${r}</option>`).join("");
     const sq = G.squads[G.clubId];
     const swapOpts = `<option value="">— geen ruilspeler —</option>` + sq.list.map(id => sq.players[id]).sort((a, b) => b.ovr - a.ovr).map(x => `<option value="${x.id}">${lastName(x.name)} (${x.pos} ${x.ovr}, ${fmtM(x.value)})</option>`).join("");
-    modal(`<span class="close-x" onclick="UI.closeModal()">×</span><h3>Bod op ${p.name} ${ovrBadge(p.ovr)}</h3>
-      <p class="muted" style="margin-bottom:10px">Marktwaarde ${fmtM(p.value)} · ${p.club ? G.clubs[p.club].name : "transfervrij"} · vraagt ±€${demandWage.toFixed(1)}k/wk${p.releaseClause ? " · afkoopsom " + fmtM(p.releaseClause) : ""}</p>
+    _bidCtx = { p: p, demandWage: demandWage };
+    modal(`<span class="close-x" onclick="UI.closeModal()">×</span><h3>Onderhandeling</h3>
+      <div class="bid-head">${p.club ? clubBadge(p.club, 34) : `<span class="bid-free">VRIJ</span>`}${playerAvatar(p, 40)}<div class="bid-head-txt"><div><b>${p.name}</b> ${ovrBadge(p.ovr)}</div><div class="muted" style="font-size:12px">${p.club ? G.clubs[p.club].name : "transfervrij"} · waarde ${fmtM(p.value)} · vraagt ±€${demandWage.toFixed(1)}k/wk${p.releaseClause ? " · afkoopsom " + fmtM(p.releaseClause) : ""}</div></div></div>
+      <div id="bid-stance" class="bid-stance"></div>
       ${!win.open ? `<div class="pill red" style="margin-bottom:10px">Window gesloten — bod niet mogelijk.</div>` : ""}
       <div class="muted" style="font-weight:700;margin:4px 0 2px">1 · ${freeAgent ? "Transfervrij — geen transfersom" : "Clubakkoord"}</div>
       ${freeAgent ? `<div class="pill green" style="margin-bottom:8px">Transfervrij: je betaalt géén transfersom, alleen tekengeld + salaris.</div>` : ""}
       <div class="grid2">
-        <div class="field-row"><label>Transfersom (M€)</label><input id="bid-fee" type="number" step="0.05" value="${suggested}" ${freeAgent ? "readonly title='Transfervrij — geen transfersom' style='opacity:.55'" : ""}></div>
+        <div class="field-row"><label>Transfersom (M€)</label><input id="bid-fee" type="number" step="0.05" value="${suggested}" oninput="UI.updateBidStance()" ${freeAgent ? "readonly title='Transfervrij — geen transfersom' style='opacity:.55'" : ""}></div>
         <div class="field-row"><label>Termijnen</label><select id="bid-inst" class="live-select" style="width:100%" ${freeAgent ? "disabled" : ""}><option value="1">1 (ineens)</option><option value="2">2</option><option value="3">3</option></select></div>
         <div class="field-row"><label>Doorverkoop %</label><input id="bid-sellon" type="number" step="1" value="0" ${freeAgent ? "disabled" : ""}></div>
         <div class="field-row"><label>Tekengeld (M€)${freeAgent ? " — verplicht" : ""}</label><input id="bid-bonus" type="number" step="0.05" value="${suggBonus}"></div>
@@ -9627,12 +9649,35 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="field-row"><label>Ruilspeler aanbieden (optioneel)</label><select id="bid-swap" class="live-select" style="width:100%">${swapOpts}</select></div>
       <div class="muted" style="font-weight:700;margin:10px 0 2px">2 · Spelerakkoord</div>
       <div class="grid2">
-        <div class="field-row"><label>Salaris (€k/wk)</label><input id="bid-wage" type="number" step="0.5" value="${demandWage}"></div>
+        <div class="field-row"><label>Salaris (€k/wk)</label><input id="bid-wage" type="number" step="0.5" value="${demandWage}" oninput="UI.updateBidStance()"></div>
         <div class="field-row"><label>Contractduur</label><select id="bid-years" class="live-select" style="width:100%">${yrOpts}</select></div>
       </div>
       <div class="field-row"><label>Rol in de selectie</label><select id="bid-role" class="live-select" style="width:100%">${roleOpts}</select></div>
       <div id="bid-msg" style="margin:8px 0;font-size:12px"></div>
       <div class="flexbar"><button class="btn primary" onclick="UI.confirmBuy(${pid})">Bod uitbrengen</button>${p.club ? `<button class="btn blue sm" onclick="UI.openLoan(${pid})">Huren…</button>` : ""}<span class="muted" style="font-size:11px">+5% zaakwaarnemer</span></div>`, true);
+    try { updateBidStance(); } catch (e) { }
+  }
+  let _bidCtx = null;
+  function stanceMeter(lbl, pct, who) {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    const col = pct >= 75 ? "var(--accent)" : pct >= 45 ? "var(--gold)" : "var(--bad)";
+    const face = pct >= 80 ? "akkoord waarschijnlijk" : pct >= 55 ? "positief" : pct >= 35 ? "twijfelt" : "weinig kans";
+    return `<div class="stance"><div class="stance-h"><b>${lbl}</b><span class="spacer"></span><span class="muted">${who} — ${face}</span><b style="color:${col};margin-left:8px">${pct}%</b></div><div class="stance-bar"><i style="width:${pct}%;background:${col}"></i></div></div>`;
+  }
+  function updateBidStance() {
+    const el = $("#bid-stance"); if (!el || !_bidCtx) return; const p = _bidCtx.p, G = GAME.getState();
+    const fee = parseFloat(($("#bid-fee") || {}).value) || 0, bonus = parseFloat(($("#bid-bonus") || {}).value) || 0, wage = parseFloat(($("#bid-wage") || {}).value) || 0;
+    const val = p.value || 1;
+    let clubPct;
+    if (!p.club) clubPct = 100;
+    else if (p.releaseClause && fee >= p.releaseClause) clubPct = 100;
+    else clubPct = fee / (val * 0.95) * 100;
+    const demand = _bidCtx.demandWage || wage || 1;
+    const clubLevel = Math.max(G.reputation || 0, (G.clubs[G.clubId] || {}).strength || 0);
+    const gap = (p.ovr || 0) - clubLevel;
+    const interestBase = gap <= 0 ? 72 : gap <= 4 ? 56 : gap <= 8 ? 36 : 16;
+    const playerPct = interestBase + (wage / demand - 1) * 45 + (bonus > 0 ? 6 : 0) + (p.age <= 21 ? 10 : 0) + ((G.euro && G.euro.in) ? 6 : 0);
+    el.innerHTML = stanceMeter(p.club ? "Clubakkoord" : "Transfervrij", clubPct, p.club ? (G.clubs[p.club] ? G.clubs[p.club].short : "club") : "geen club") + stanceMeter("Spelerakkoord", playerPct, lastName(p.name));
   }
   function confirmBuy(pid) {
     const offer = { fee: parseFloat($("#bid-fee").value) || 0, installments: parseInt($("#bid-inst").value) || 1, sellOn: parseFloat($("#bid-sellon").value) || 0, signBonus: parseFloat($("#bid-bonus").value) || 0, swapId: $("#bid-swap").value ? parseInt($("#bid-swap").value) : null, wage: parseFloat($("#bid-wage").value) || 0, years: parseInt($("#bid-years").value) || 3, role: $("#bid-role").value };
@@ -10042,6 +10087,35 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function moveBudget(dir, amt) { const r = dir === "wage" ? GAME.moveToWage(amt) : GAME.moveToTransfer(amt); toast(r.msg); GAME.saveGame(); renderScreen(); }
   function requestBudget() { const r = GAME.requestBudget(); toast(r.msg); GAME.saveGame(); renderScreen(); }
+  // VISUELE BESTUURSVERGADERING
+  function boardMeeting() {
+    const G = GAME.getState(); const club = G.clubs[G.clubId]; const conf = Math.round(G.jobSecurity || 50);
+    const table = E.sortedTable(G.tables[club.div]); const pos = table.findIndex(t => t.id === G.clubId) + 1;
+    const target = (G.objective && G.objective.target) || 10; const onTrack = pos > 0 && pos <= target;
+    const mood = conf >= 65 ? "tevreden" : conf >= 40 ? "afwachtend" : "kritisch";
+    const moodCol = conf >= 65 ? "var(--accent)" : conf >= 40 ? "var(--gold)" : "var(--bad)";
+    const greet = onTrack ? `Fijn dat je er bent. We liggen op koers — ${pos}e plek. Hou dit vast en we praten graag over de toekomst.`
+      : `Bedankt voor je komst. We staan ${pos}e, dat is onder de afspraak (top ${target}). We rekenen op verbetering.`;
+    modal(`<div class="meeting"><span class="close-x" onclick="UI.closeModal()">×</span>
+      <div class="mtg-head"><div class="mtg-av">VZ</div><div><div class="mtg-role">Voorzitter · ${club.name}</div><div style="font-size:12px;color:${moodCol};font-weight:700">Bestuur: ${mood}</div></div></div>
+      <div class="mtg-bubble">${greet}</div>
+      <div class="mtg-conf"><div class="flexbar" style="margin-bottom:4px"><span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">Vertrouwen bestuur</span><span class="spacer"></span><b style="color:${moodCol}">${conf}%</b></div><div class="bar-meter"><i style="width:${conf}%;background:${moodCol}"></i></div></div>
+      <div class="panel-sub" style="margin-top:10px"><div class="flexbar"><b>Doelstelling</b><span class="spacer"></span><span class="pill ${onTrack ? "green" : "red"}">${onTrack ? "op koers" : "onder de norm"}</span></div><p class="muted" style="font-size:12.5px;margin-top:4px">${cap(G.objective.text)} · huidige stand: ${pos}e in ${leagueLabel(club.div)}</p></div>
+      <div id="mtg-resp"></div>
+      <div class="mtg-actions">
+        <button class="btn primary sm" onclick="UI.mtgAction('budget')">Vraag transferbudget</button>
+        <button class="btn sm" onclick="UI.mtgAction('ambition')">Bespreek de ambitie</button>
+        <button class="btn sm" onclick="UI.mtgAction('confidence')">Presenteer je plan</button>
+      </div></div>`, true);
+  }
+  function mtgAction(kind) {
+    const G = GAME.getState(); const el = $("#mtg-resp"); let msg = "";
+    if (kind === "budget") { const r = GAME.requestBudget(); msg = r.msg; GAME.saveGame(); }
+    else if (kind === "ambition") { msg = `We verwachten dit seizoen: ${(G.objective.text || "").toLowerCase()}. Lever dat, dan is er ruimte om ambitieuzer te worden.`; }
+    else { G.jobSecurity = Math.min(100, (G.jobSecurity || 50) + 5); GAME.saveGame(); msg = `Sterk verhaal. Je visie overtuigt — het bestuur spreekt vertrouwen uit (+5%).`; }
+    if (el) { el.innerHTML = `<div class="mtg-bubble reply">${msg}</div>`; const cb = document.querySelector(".mtg-conf .bar-meter i"); if (cb) cb.style.width = Math.round(GAME.getState().jobSecurity || 50) + "%"; }
+    else toast(msg);
+  }
   function setWinBonus(v) { GAME.setWinBonus(parseFloat(v)); GAME.saveGame(); }
   function ffpPanel(G) {
     const health = GAME.financialHealth(); const net3 = GAME.ffp3Net(); const th = GAME.ffpThreshold();
@@ -10238,7 +10312,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     startLive, quickPlay, livePause, liveSpeed, liveMentality, openSubPanel, subPick, confirmSub, closeSub, simIdle, teamTalk, takePen, advance, skipToMatch,
     setCompTab, endSeason, afterRecap, showLoting, doFriendly, resolveEvent, openNewspaper, onbTour, onbDone, setExtraFilter,
     negotiateOwnContract, confirmRetire, openPress, pickPress, takeJob,
-    setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch,
+    setTransferTab, openBuy, confirmBuy, openSell, confirmSell, acceptOffer, rejectOffer, openLoan, confirmLoan, toggleShortlist, openCompare, doCompare, searchPlayers, searchLeague, resetSearch, updateBidStance, boardMeeting, mtgAction,
     doScout, setRange, removeFocus, assignFocusScout, openNewFocus, confirmNewFocus, openHireScout, pickScoutCand, fireScout, upgradeAcademy, setScoutFocus, openStaffHire, pickStaff, setIntensity, doCamp, loanOut,
     expandStadium, updateStadCost, upgradeFacility, doSponsors, openCommercial, pickCommercial, setTicket, setSeasonTicket, moveBudget, requestBudget, setWinBonus, doFinLoan, doInvestor, save, quitToMenu,
     toggleTheme, toggleSound, setDiff, saveSlot, loadSlot, doExport, doImport, showHelp,
