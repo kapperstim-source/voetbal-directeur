@@ -7825,7 +7825,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function posChip(pos) { return `<span class="pos-chip pos-${line(pos)}">${pos}</span>`; }
   function ovrBadge(o) { return `<span class="ovr ${ovrClass(o)}">${o}</span>`; }
   function lastName(n) { return n.split(" ").slice(-1)[0]; }
-  function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = stripEmoji(String(msg)); document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
   function modal(html, big) { closeModal(); const bg = document.createElement("div"); bg.className = "modal-bg"; bg.id = "modalbg"; bg.innerHTML = `<div class="modal${big ? " big" : ""}">${html}</div>`; bg.addEventListener("click", e => { if (e.target === bg) closeModal(); }); document.body.appendChild(bg); deEmoji(bg); }
   function closeModal() { const m = document.getElementById("modalbg"); if (m) m.remove(); }
   function contrast(hex) { const c = hex.replace("#", ""); const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16); return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#111" : "#fff"; }
@@ -7850,7 +7850,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ${scorer ? `<div class="gc-scorer">${scorer} <span class="gc-min">${min}'</span></div>` : ""}
       ${assist ? `<div class="gc-assist">assist — ${assist}</div>` : ""}
       <div class="gc-score">${G.clubs[M.home.club].short} ${M.hg} – ${M.ag} ${G.clubs[M.away.club].short}</div>`;
-    wrap.appendChild(d);
+    wrap.appendChild(d); deEmoji(d);
     const panel = document.getElementById("mlivepanel"); if (panel) { panel.classList.add("shake"); setTimeout(() => panel.classList.remove("shake"), 600); }
     setTimeout(() => d.classList.add("out"), 1950);
     setTimeout(() => d.remove(), 2350);
@@ -7999,11 +7999,18 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   }
   function nav(s) { if (live && live.timer) { clearInterval(live.timer); live.timer = null; } selPlayer = null; navOpen = false; screen = s; if (s === "inbox") GAME.getState().inbox.forEach(i => i.read = true); renderApp(); }
   const _EMOJI_LEAD = /^[\s←-⇿⌀-➿⬀-⯿️‍\uD800-\uDFFF]+/;
+  // alle emoji-pictogrammen (kleurrijk) — géén professionele tekens als ▶ ★ ● ↑ → ▼ (die blijven)
+  const _EMOJI_ALL = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{231A}-\u{231B}\u{23E9}-\u{23FA}\u{FE00}-\u{FE0F}\u{2049}\u{203C}\u{20E3}\u{200D}]/gu;
+  function stripEmoji(s) { return (typeof s === "string") ? s.replace(_EMOJI_ALL, "").replace(/\s{2,}/g, " ").replace(/\s+([·•.,:;!?)])/g, "$1") : s; }
   function deEmoji(root) {
     if (!root) return;
     try {
-      root.querySelectorAll("h3, h2, .topbar h2, .seg button").forEach(function (el) { const n = el.innerHTML.replace(_EMOJI_LEAD, ""); if (n !== el.innerHTML) el.innerHTML = n; });
-      root.querySelectorAll(".btn").forEach(function (el) { const n = el.innerHTML.replace(_EMOJI_LEAD, ""); if (n !== el.innerHTML && n.replace(/<[^>]*>/g, "").trim().length) el.innerHTML = n; }); // knoppen: strip alléén als er tekst overblijft (★/☆-knoppen blijven)
+      // 1) verwijder emoji uit ALLE tekst (hele boom)
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = [], t;
+      while ((t = w.nextNode())) nodes.push(t);
+      nodes.forEach(function (n) { var v = n.nodeValue; if (!v) return; var c = v.replace(_EMOJI_ALL, ""); if (c !== v) n.nodeValue = c.replace(/\s{2,}/g, " ").replace(/\s+([·•.,:;!?)])/g, "$1"); });
+      // 2) trim losse randspaties op label-elementen (na het strippen)
+      root.querySelectorAll("h1,h2,h3,h4,.btn,.pill,.ac-title,.et-nm,.tr-head,.ib-title,.ib-from,.task-lbl,.seg button,.topbar h2,.extra-cat-h,.ac-sec-h").forEach(function (el) { var h = el.innerHTML.replace(/^(?:\s|&nbsp;)+/, "").replace(/(?:\s|&nbsp;)+$/, ""); if (h !== el.innerHTML && h.replace(/<[^>]*>/g, "").trim().length) el.innerHTML = h; });
     } catch (e) {}
   }
   function renderScreen() {
@@ -8581,7 +8588,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     const tag = riv ? `<div class="ko-derby">${riv.derby ? "🔥 DE DERBY" : "🔥 DE KRAKER"}</div>` : "";
     const balance = riv && riv.bal ? `<div class="ko-balance">Onderling: ${riv.bal.w}W · ${riv.bal.d}G · ${riv.bal.l}V · intensiteit ${riv.intensity}</div>` : "";
     d.innerHTML = `${tag}<div class="ko-row"><span class="ko-team ko-l">${hc.name}</span><span class="ko-vs">VS</span><span class="ko-team ko-r">${ac.name}</span></div>${balance}<div class="ko-whistle">▶ AFTRAP</div>`;
-    wrap.appendChild(d);
+    wrap.appendChild(d); deEmoji(d);
     if (riv) { try { global.AUDIO && global.AUDIO.whistle && global.AUDIO.whistle(); } catch (e) { } }
     setTimeout(() => d.classList.add("out"), riv ? 1900 : 1300);
     setTimeout(() => d.remove(), riv ? 2300 : 1700);
@@ -8606,6 +8613,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ${GAME.getState().squads[GAME.getState().clubId].tacticsB ? `<button class="btn sm" onclick="UI.switchPlan()">↔ ${live.usingB ? "Plan B" : "Plan A"}</button>` : ""}
       <span class="muted" style="margin-left:auto">Mentaliteit:</span>
       <select class="live-select" onchange="UI.liveMentality(this.value)">${D.TACTICS.mentality.map(o => `<option ${live.userSide.tactics.mentality === o ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+    deEmoji(el);
   }
   function liveTick() {
     if (!live || live.paused) return;
@@ -8653,7 +8661,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="flexbar muted" style="font-size:11px;margin-top:1px"><span>hoekschoppen ${st.corH != null ? st.corH : 0} · duels gewonnen ${st.duelH != null ? st.duelH : 0}</span><span class="spacer"></span><span>${st.corA != null ? st.corA : 0} · ${st.duelA != null ? st.duelA : 0}</span></div>`;
   }
   function weatherIcon(w) { return { Zonnig: "☀️", Bewolkt: "☁️", Regen: "🌧️", Wind: "💨", Sneeuw: "❄️" }[w] || "🌤️"; }
-  function updateMeta() { const el = $("#mmeta"); if (!el || !live) return; const M = live.M, G = GAME.getState(); el.innerHTML = `<span>${weatherIcon(M.weather)} ${M.weather}</span><span class="spacer"></span><span class="muted">Scheidsrechter-extra: ${M.extra}'</span>`; }
+  function updateMeta() { const el = $("#mmeta"); if (!el || !live) return; const M = live.M, G = GAME.getState(); el.innerHTML = `<span>${weatherIcon(M.weather)} ${M.weather}</span><span class="spacer"></span><span class="muted">Scheidsrechter-extra: ${M.extra}'</span>`; deEmoji(el); }
   function updateMomentum() { const el = $("#mmomentum"); if (!el || !live) return; const mo = live.M.momentum || 0; el.firstElementChild.style.width = Math.round(50 + mo / 2) + "%"; }
 
   // ---- 2D veld-animatie (#1) ----
@@ -8835,7 +8843,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function badgeToast(name) {
     const d = document.createElement("div"); d.className = "badge-pop";
     d.innerHTML = `<div class="bp-medal">${trophySVG("#f0c040")}</div><div class="bp-txt"><div class="bp-k">Prestatie ontgrendeld</div><div class="bp-n">${name}</div></div>`;
-    document.body.appendChild(d); try { global.AUDIO && global.AUDIO.goal && global.AUDIO.goal(); } catch (e) { }
+    document.body.appendChild(d); deEmoji(d); try { global.AUDIO && global.AUDIO.goal && global.AUDIO.goal(); } catch (e) { }
     setTimeout(() => d.classList.add("show"), 30); setTimeout(() => d.classList.remove("show"), 3400); setTimeout(() => d.remove(), 3900);
   }
   function badgeGrid() {
@@ -9055,7 +9063,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
   function addComment(comm, ev) {
     if (!comm) return;
     const cls = (ev.type === "goal" || ev.type === "varok") ? "goal" : (ev.type === "injury" || ev.type === "red" || ev.type === "var") ? "injury" : (ev.type === "press" || ev.type === "counter") ? "act" : (["longball", "cross", "combo", "dribble", "tackle", "intercept", "corner"].includes(ev.type)) ? "flavor" : "";
-    const d = document.createElement("div"); d.className = "cmt " + cls; d.textContent = ev.text; comm.appendChild(d); comm.scrollTop = comm.scrollHeight;
+    const d = document.createElement("div"); d.className = "cmt " + cls; d.textContent = stripEmoji(String(ev.text || "")); comm.appendChild(d); comm.scrollTop = comm.scrollHeight;
   }
 
   function finishLive() {
@@ -9241,6 +9249,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       ${(function () { const v = tacticalVerdict(); return v && v.length ? `<div class="tac-verdict"><div class="tr-head">🧠 Waarom deze uitslag</div>${v.map(x => `<div class="tr-line">${x}</div>`).join("")}</div>` : ""; })()}
       ${others}
       <div class="ft-actions">${seasonDone ? `<button class="btn primary" onclick="UI.nav('competitions')">Seizoen afronden ▶</button>` : `<button class="btn primary" onclick="UI.nav('match')">Volgende wedstrijd ▶</button>`}<button class="btn sm" onclick="UI.openNewspaper()">📰 Ochtendkrant</button><button class="btn sm" onclick="UI.nav('competitions')">Stand</button></div>`;
+    try { deEmoji($("#mafter")); } catch (e) { }   // emoji-vrij eindscherm
     try { _lastPaper = buildPaper(ur, out, motm); } catch (e) { _lastPaper = null; } // (2) krant klaarzetten
     maybeTrophyCele();   // beker-/Europa-finale gewonnen? -> viering bovenop
     syncBadges();        // (4) nieuwe prestaties -> unlock-popup
