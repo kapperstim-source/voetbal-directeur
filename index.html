@@ -8114,7 +8114,6 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           ${extHtml("dashboard") || `<div class="panel"><h3>Te doen</h3><div class="task-list">${taskHtml}</div></div>`}
         </div>
         <div class="home-side">
-          ${assistantPanel(G)}
           <div class="panel"><h3>Doel bestuur</h3><p style="font-size:15px;margin-bottom:10px">${cap(G.objective.text)}</p>
             <div class="muted" style="font-size:12px">Vertrouwen bestuur</div><div class="bar-meter"><i style="width:${Math.round(G.jobSecurity)}%;background:${G.jobSecurity >= 50 ? "var(--accent)" : "var(--bad)"}"></i></div>
             <p class="muted" style="margin-top:12px;font-size:12px;line-height:1.7">${cupLine}<br>${euroLine}<br>Topscorer: <b style="color:var(--txt)">${topScorer ? topScorer.name + " (" + topScorer.sGoals + ")" : "—"}</b></p></div>
@@ -10411,124 +10410,119 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
 })();
 
 /* ==== ext/feat_action_center.js ==== */
-/* EXTENSIE: Actiecentrum — het "brein" dat de data omzet in concrete acties met knoppen.
-   Analyseert selectie/contracten/conditie/diepte/blessures/financien en stelt geprioriteerde
-   acties voor die je met 1 klik uitvoert (via bestaande UI-acties). Ook een blok op het dashboard. */
+/* EXTENSIE: Actiecentrum — zet de data om in concrete acties. Overzichtelijk:
+   1 primaire knop per rij (klik de rij zelf voor alle acties via de spelerkaart),
+   gesplitst in Urgent / Adviezen. Ook een compact blok op het dashboard. */
 (function () {
   if (!window.UI || !UI.ext) return;
   var U = UI.ext.util;
 
   UI.ext.css(
-    ".ac-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:8px;flex-wrap:wrap}" +
-    ".ac-item.ac-urgent{border-color:rgba(229,72,77,.45);background:linear-gradient(160deg,rgba(229,72,77,.10),rgba(255,255,255,.02))}" +
-    ".ac-ico{font-size:22px;line-height:1;flex:0 0 auto}" +
-    ".ac-body{flex:1;min-width:150px}.ac-title{font-weight:800;font-size:13.5px}.ac-det{font-size:12px;line-height:1.4;margin-top:2px}" +
-    ".ac-actions{display:flex;gap:6px;flex-wrap:wrap}" +
-    ".ac-tag{font-size:9.5px;text-transform:uppercase;letter-spacing:1px;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px}" +
-    ".ac-tag.u{background:rgba(229,72,77,.2);color:#ff8b8e}.ac-tag.a{background:rgba(22,229,143,.15);color:var(--accent,#16e58f)}"
+    ".ac-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:6px;transition:border-color .12s}" +
+    ".ac-item.ac-urgent{border-color:rgba(229,72,77,.38);background:linear-gradient(160deg,rgba(229,72,77,.08),rgba(255,255,255,.015))}" +
+    ".ac-item.ac-click{cursor:pointer}.ac-item.ac-click:hover{border-color:rgba(255,255,255,.2)}" +
+    ".ac-ico{font-size:18px;line-height:1;flex:0 0 auto}" +
+    ".ac-body{flex:1;min-width:0}.ac-title{font-weight:700;font-size:13px}" +
+    ".ac-det{font-size:11.5px;line-height:1.35;margin-top:1px}" +
+    ".ac-btn{flex:0 0 auto}" +
+    ".ac-sec-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px}" +
+    ".ac-sec-h.u{color:#ff7a7d}.ac-sec-h.a{color:var(--accent,#16e58f)}"
   );
 
   function R(refresh) { return refresh ? (";UI.nav('" + refresh + "')") : ""; }
 
-  // Analyseer de staat en lever geprioriteerde, uitvoerbare acties
   function buildItems(G, refresh) {
     var items = [];
     var sq = (G.squads || {})[G.clubId]; if (!sq) return items;
     var mine = U.players();
     var budget = ((G.clubs || {})[G.clubId] || {}).budget || 0;
+    var card = function (id) { return "UI.playerCard(" + id + ")"; };
+
+    var dec = (G.inbox || []).filter(function (i) { return i.event && !i.decided; }).length;
+    if (dec) items.push({ sev: "urgent", emoji: "📨", title: "Beslissing vereist", detail: dec + " situatie" + (dec > 1 ? "s wachten" : " wacht") + " op je keuze.", primary: { label: "Inbox", onclick: "UI.nav('inbox')" } });
+
     var xiN = (sq.xi || []).filter(Boolean).length;
-    if (xiN < 11) items.push({ sev: "urgent", emoji: "⚠️", title: "Opstelling niet compleet", detail: "Je hebt maar " + xiN + " basisspelers opgesteld. Vul je elftal aan voor de wedstrijd.", actions: [{ label: "Auto-opstelling", primary: true, onclick: "UI.autoPick&&UI.autoPick()" + R(refresh) }, { label: "Opstelling", onclick: "UI.nav('squad')" }] });
-    if (budget < 0) items.push({ sev: "urgent", emoji: "🔴", title: "Budget staat rood", detail: "Je staat op " + U.fmtM(budget) + ". Verkoop spelers of bezuinig — anders dreigt een FFP-sanctie.", actions: [{ label: "Financiën", primary: true, onclick: "UI.nav('finances')" }, { label: "Verkopen", onclick: "UI.nav('transfers')" }] });
+    if (xiN < 11) items.push({ sev: "urgent", emoji: "⚠️", title: "Opstelling niet compleet", detail: "Je hebt maar " + xiN + " basisspelers.", primary: { label: "Auto", onclick: "UI.autoPick&&UI.autoPick()" + R(refresh) }, open: "UI.nav('squad')" });
+
+    var unavail = (sq.xi || []).filter(function (id) { var p = sq.players[id]; return p && ((p.injuredWeeks || 0) > 0 || (p.suspended || 0) > 0); }).length;
+    if (unavail) items.push({ sev: "urgent", emoji: "🔧", title: "Opstelling aanpassen", detail: unavail + " basisspeler(s) niet inzetbaar.", primary: { label: "Opstelling", onclick: "UI.nav('squad')" } });
+
+    if (budget < 0) items.push({ sev: "urgent", emoji: "🔴", title: "Budget staat rood", detail: "Je staat op " + U.fmtM(budget) + " — FFP-risico.", primary: { label: "Financiën", onclick: "UI.nav('finances')" } });
 
     var unhappy = mine.filter(function (p) { return p.transferRequest || ((p.ptHappy != null) && p.ptHappy < 30); });
-    unhappy.slice(0, 3).forEach(function (p) {
-      items.push({ sev: "urgent", emoji: "😠", title: U.lastName(p.name) + " is ontevreden", detail: p.transferRequest ? "Heeft een transferverzoek ingediend — praat of verkoop." : "Wil meer speeltijd (tevredenheid " + Math.round(p.ptHappy) + "%).", actions: [{ label: "Beloof speeltijd", primary: true, onclick: "UI.promisePT&&UI.promisePT(" + p.id + ")" + R(refresh) }, { label: "Verkoop", onclick: "UI.openSell&&UI.openSell(" + p.id + ")" }, { label: "Bekijk", onclick: "UI.playerCard(" + p.id + ")" }] });
-    });
+    unhappy.slice(0, 3).forEach(function (p) { items.push({ sev: "urgent", emoji: "😠", title: U.lastName(p.name) + " is ontevreden", detail: p.transferRequest ? "Transferverzoek ingediend." : "Wil meer speeltijd (" + Math.round(p.ptHappy) + "%).", primary: { label: "Beloof speeltijd", onclick: "UI.promisePT&&UI.promisePT(" + p.id + ")" + R(refresh) }, open: card(p.id) }); });
 
     var exp = mine.filter(function (p) { return (p.contract || 0) <= 1 && !p.loanedFrom; }).sort(function (a, b) { return b.ovr - a.ovr; });
-    exp.slice(0, 3).forEach(function (p) {
-      items.push({ sev: p.ovr >= 75 ? "urgent" : "advies", emoji: "📝", title: "Contract " + U.lastName(p.name) + " loopt af", detail: "OVR " + p.ovr + " · nog " + (p.contract || 0) + " jaar. Verleng nu, anders vertrekt hij (bijna) gratis.", actions: [{ label: "Verleng", primary: true, onclick: "UI.doRenew&&UI.doRenew(" + p.id + ")" + R(refresh) }, { label: "Bekijk", onclick: "UI.playerCard(" + p.id + ")" }] });
-    });
+    exp.slice(0, 3).forEach(function (p) { items.push({ sev: p.ovr >= 75 ? "urgent" : "advies", emoji: "📝", title: "Contract " + U.lastName(p.name) + " loopt af", detail: "OVR " + p.ovr + " · verleng of hij vertrekt (bijna) gratis.", primary: { label: "Verleng", onclick: "UI.doRenew&&UI.doRenew(" + p.id + ")" + R(refresh) }, open: card(p.id) }); });
 
     var inj = mine.filter(function (p) { return (p.injuredWeeks || 0) > 0; });
-    if (inj.length) items.push({ sev: "advies", emoji: "🚑", title: inj.length + " geblesseerde speler" + (inj.length > 1 ? "s" : ""), detail: inj.slice(0, 3).map(function (p) { return U.lastName(p.name) + " (" + p.injuredWeeks + "w)"; }).join(", ") + (inj.length > 3 ? " e.a." : ""), actions: [{ label: "Medisch centrum", onclick: "UI.nav('ext_medical')" }] });
+    if (inj.length) items.push({ sev: "advies", emoji: "🚑", title: inj.length + " geblesseerde speler" + (inj.length > 1 ? "s" : ""), detail: inj.slice(0, 3).map(function (p) { return U.lastName(p.name); }).join(", ") + (inj.length > 3 ? " e.a." : ""), primary: { label: "Medisch", onclick: "UI.nav('ext_medical')" } });
 
     var tired = (sq.xi || []).map(function (id) { return sq.players[id]; }).filter(function (p) { return p && (p.fitness || 100) < 62; });
-    if (tired.length) items.push({ sev: "advies", emoji: "😓", title: tired.length + " vermoeide basisspeler" + (tired.length > 1 ? "s" : ""), detail: tired.slice(0, 3).map(function (p) { return U.lastName(p.name) + " " + p.fitness + "%"; }).join(", ") + " — overweeg te rouleren.", actions: [{ label: "Opstelling", onclick: "UI.nav('squad')" }] });
+    if (tired.length) items.push({ sev: "advies", emoji: "😓", title: tired.length + " vermoeide basisspeler" + (tired.length > 1 ? "s" : ""), detail: "Overweeg te rouleren voor de volgende wedstrijd.", primary: { label: "Opstelling", onclick: "UI.nav('squad')" } });
+
+    var offers = (G.offersIn || []).length;
+    if (offers) items.push({ sev: "advies", emoji: "📥", title: offers + " binnengekomen bod" + (offers > 1 ? "en" : ""), detail: "Andere clubs bieden op jouw spelers.", primary: { label: "Bekijk", onclick: "UI.nav('transfers')" } });
 
     var talents = mine.filter(function (p) { return (p.age || 30) <= 21 && ((p.pot || 0) - (p.ovr || 0)) >= 4 && (p.sApps || 0) <= 3; }).sort(function (a, b) { return (b.pot || 0) - (a.pot || 0); });
-    talents.slice(0, 2).forEach(function (p) {
-      items.push({ sev: "advies", emoji: "🌱", title: U.lastName(p.name) + " speelt te weinig", detail: "Talent (" + p.age + "j, potentie " + (p.pot || p.ovr) + ") met slechts " + (p.sApps || 0) + " duels. Verhuren voor speelminuten?", actions: [{ label: "Verhuren", onclick: "UI.loanOut&&UI.loanOut(" + p.id + ")" }, { label: "Bekijk", onclick: "UI.playerCard(" + p.id + ")" }] });
-    });
+    talents.slice(0, 2).forEach(function (p) { items.push({ sev: "advies", emoji: "🌱", title: U.lastName(p.name) + " speelt te weinig", detail: "Talent (" + p.age + "j, pot " + (p.pot || p.ovr) + "). Verhuren voor minuten?", primary: { label: "Verhuur", onclick: "UI.loanOut&&UI.loanOut(" + p.id + ")" }, open: card(p.id) }); });
 
     var byPos = {}; mine.forEach(function (p) { byPos[p.pos] = (byPos[p.pos] || 0) + 1; });
     var thin = Object.keys(byPos).filter(function (k) { return byPos[k] < 2; });
-    if (thin.length) items.push({ sev: "advies", emoji: "🧩", title: "Dun bezette positie" + (thin.length > 1 ? "s" : ""), detail: thin.join(", ") + " — hier heb je te weinig spelers. Versterk of promoveer een talent.", actions: [{ label: "Transfers", onclick: "UI.nav('transfers')" }, { label: "Selectieplanner", onclick: "UI.nav('ext_plan')" }] });
-
-    var offers = (G.offersIn || []).length;
-    if (offers) items.push({ sev: "advies", emoji: "📥", title: offers + " binnengekomen bod" + (offers > 1 ? "en" : ""), detail: "Andere clubs bieden op jouw spelers — accepteren of afwijzen.", actions: [{ label: "Bekijk biedingen", onclick: "UI.nav('transfers')" }] });
+    if (thin.length) items.push({ sev: "advies", emoji: "🧩", title: "Dun bezette positie" + (thin.length > 1 ? "s" : ""), detail: thin.join(", ") + " — versterk of promoveer jeugd.", primary: { label: "Transfers", onclick: "UI.nav('transfers')" } });
 
     var sellop = mine.filter(function (p) { return (p.age || 0) >= 31 && (p.value || 0) >= 8 && p.club === G.clubId; }).sort(function (a, b) { return (b.value || 0) - (a.value || 0); });
-    sellop.slice(0, 1).forEach(function (p) {
-      items.push({ sev: "advies", emoji: "💰", title: "Verkoopkans: " + U.lastName(p.name), detail: p.age + " jaar, waarde " + U.fmtM(p.value) + ". Verzilver zijn waarde nu het nog kan.", actions: [{ label: "Zet te koop", onclick: "UI.openSell&&UI.openSell(" + p.id + ")" }, { label: "Bekijk", onclick: "UI.playerCard(" + p.id + ")" }] });
-    });
+    sellop.slice(0, 1).forEach(function (p) { items.push({ sev: "advies", emoji: "💰", title: "Verkoopkans: " + U.lastName(p.name), detail: p.age + "j, waarde " + U.fmtM(p.value) + ". Verzilver nu het kan.", primary: { label: "Zet te koop", onclick: "UI.openSell&&UI.openSell(" + p.id + ")" }, open: card(p.id) }); });
 
-    try { var win = GAME.transferWindowOpen ? GAME.transferWindowOpen() : null; if (win && win.open && budget >= 8) items.push({ sev: "advies", emoji: "🟢", title: "Transferwindow is open", detail: "Je hebt " + U.fmtM(budget) + " te besteden (" + (win.name || "window") + ", sluit " + (win.closes || "binnenkort") + "). Versterk waar nodig.", actions: [{ label: "Naar transfers", onclick: "UI.nav('transfers')" }, { label: "Koopjes-radar", onclick: "UI.nav('ext_bargain_radar')" }] }); } catch (e) { }
+    try { var pm = GAME.getNextUserMatch ? GAME.getNextUserMatch() : null; if (G.press && G.press.q && !G.press.done && pm && !pm.idle) items.push({ sev: "advies", emoji: "🎤", title: "Persconferentie", detail: "De media wacht op je reactie vóór de wedstrijd.", primary: { label: "Persco", onclick: "UI.openPress&&UI.openPress()" } }); } catch (e) { }
 
-    // openstaande beslissing in de inbox
-    var dec = (G.inbox || []).filter(function (i) { return i.event && !i.decided; }).length;
-    if (dec) items.push({ sev: "urgent", emoji: "📨", title: "Beslissing vereist", detail: dec + " situatie" + (dec > 1 ? "s wachten" : " wacht") + " op je keuze in de inbox.", actions: [{ label: "Naar inbox", primary: true, onclick: "UI.nav('inbox')" }] });
-    // niet-inzetbare basisspelers
-    var unavail = (sq.xi || []).filter(function (id) { var p = sq.players[id]; return p && ((p.injuredWeeks || 0) > 0 || (p.suspended || 0) > 0); }).length;
-    if (unavail) items.push({ sev: "urgent", emoji: "🔧", title: "Opstelling aanpassen", detail: unavail + " basisspeler(s) niet inzetbaar (blessure/schorsing).", actions: [{ label: "Naar opstelling", primary: true, onclick: "UI.nav('squad')" }] });
-    // persconferentie
-    try { var pm = GAME.getNextUserMatch ? GAME.getNextUserMatch() : null; if (G.press && G.press.q && !G.press.done && pm && !pm.idle) items.push({ sev: "advies", emoji: "🎤", title: "Persconferentie", detail: "De media wacht op je reactie vóór de wedstrijd.", actions: [{ label: "Persco", primary: true, onclick: "UI.openPress&&UI.openPress()" }, { label: "Wedstrijd", onclick: "UI.nav('match')" }] }); } catch (e) { }
-    // jeugd-prospects om vast te leggen
     var yp = (G.youth && G.youth.prospects) ? G.youth.prospects.length : 0;
-    if (yp) items.push({ sev: "advies", emoji: "⭐", title: "Jeugd-prospects beschikbaar", detail: yp + " talent(en) om vast te leggen voor de opleiding.", actions: [{ label: "Naar jeugd", onclick: "UI.nav('jeugd')" }] });
-    // scoutrapporten
-    var scoutN = (G.scouting && G.scouting.prospects) ? G.scouting.prospects.filter(function (id) { var p = G.players[id]; return p && (p.scoutKnow || 0) < 90; }).length : 0;
-    if (scoutN) items.push({ sev: "advies", emoji: "🔍", title: "Scoutrapporten", detail: scoutN + " naam/namen om verder te scouten.", actions: [{ label: "Naar scouting", onclick: "UI.nav('scouting')" }] });
-    // afgelopen sponsordeal
-    var cExp = G.commercial ? Object.keys(G.commercial).filter(function (k) { return G.commercial[k] && G.commercial[k].expired; }).length : 0;
-    if (cExp) items.push({ sev: "advies", emoji: "🤝", title: "Sponsordeal afgelopen", detail: cExp + " commerciële deal(s) opnieuw te onderhandelen.", actions: [{ label: "Naar financiën", onclick: "UI.nav('finances')" }] });
-    // tactiek nog niet ingesleten
-    var tf = (G.tactFamiliarity != null ? G.tactFamiliarity : 100);
-    if (tf < 55) items.push({ sev: "advies", emoji: "📋", title: "Tactiek nog niet ingesleten", detail: "Je team kent deze formatie pas " + Math.round(tf) + "% — speel & train om in te slijten.", actions: [{ label: "Naar tactiek", onclick: "UI.nav('tactics')" }] });
+    if (yp) items.push({ sev: "advies", emoji: "⭐", title: "Jeugd-prospects beschikbaar", detail: yp + " talent(en) om vast te leggen.", primary: { label: "Jeugd", onclick: "UI.nav('jeugd')" } });
 
-    items.sort(function (a, b) { return (a.sev === "urgent" ? 0 : 1) - (b.sev === "urgent" ? 0 : 1); });
+    var scoutN = (G.scouting && G.scouting.prospects) ? G.scouting.prospects.filter(function (id) { var p = G.players[id]; return p && (p.scoutKnow || 0) < 90; }).length : 0;
+    if (scoutN) items.push({ sev: "advies", emoji: "🔍", title: "Scoutrapporten", detail: scoutN + " naam/namen om verder te scouten.", primary: { label: "Scouting", onclick: "UI.nav('scouting')" } });
+
+    try { var win = GAME.transferWindowOpen ? GAME.transferWindowOpen() : null; if (win && win.open && budget >= 8) items.push({ sev: "advies", emoji: "🟢", title: "Transferwindow open", detail: "Budget " + U.fmtM(budget) + " · " + (win.name || "window") + ", sluit " + (win.closes || "binnenkort") + ".", primary: { label: "Transfers", onclick: "UI.nav('transfers')" } }); } catch (e) { }
+
+    var cExp = G.commercial ? Object.keys(G.commercial).filter(function (k) { return G.commercial[k] && G.commercial[k].expired; }).length : 0;
+    if (cExp) items.push({ sev: "advies", emoji: "🤝", title: "Sponsordeal afgelopen", detail: cExp + " deal(s) opnieuw te onderhandelen.", primary: { label: "Financiën", onclick: "UI.nav('finances')" } });
+
+    var tf = (G.tactFamiliarity != null ? G.tactFamiliarity : 100);
+    if (tf < 55) items.push({ sev: "advies", emoji: "📋", title: "Tactiek nog niet ingesleten", detail: "Formatie pas " + Math.round(tf) + "% bekend — speel & train.", primary: { label: "Tactiek", onclick: "UI.nav('tactics')" } });
+
     return items;
   }
 
-  function itemCard(it, compact) {
-    var btns = it.actions.map(function (a) { return '<button class="btn ' + (a.primary ? "primary " : "") + 'sm" onclick="' + a.onclick + '">' + a.label + "</button>"; }).join(" ");
-    var tag = compact ? "" : '<span class="ac-tag ' + (it.sev === "urgent" ? "u" : "a") + '">' + (it.sev === "urgent" ? "urgent" : "advies") + "</span>";
-    return '<div class="ac-item ' + (it.sev === "urgent" ? "ac-urgent" : "") + '"><div class="ac-ico">' + it.emoji + '</div>' +
-      '<div class="ac-body"><div class="ac-title">' + it.title + tag + '</div><div class="ac-det muted">' + it.detail + "</div></div>" +
-      '<div class="ac-actions">' + btns + "</div></div>";
+  function itemCard(it) {
+    var p = it.primary;
+    var btn = p ? '<button class="btn ' + (it.sev === "urgent" ? "primary " : "") + 'sm ac-btn" onclick="event.stopPropagation();' + p.onclick + '">' + p.label + "</button>" : "";
+    var clickable = it.open ? true : false;
+    return '<div class="ac-item ' + (it.sev === "urgent" ? "ac-urgent " : "") + (clickable ? "ac-click" : "") + '"' + (clickable ? ' onclick="' + it.open + '"' : "") + ">" +
+      '<div class="ac-ico">' + it.emoji + '</div>' +
+      '<div class="ac-body"><div class="ac-title">' + it.title + '</div><div class="ac-det muted">' + it.detail + "</div></div>" + btn + "</div>";
   }
 
-  // Volledig scherm
   UI.ext.screen("ext_actions", {
     label: "Actiecentrum", emoji: "🧠", desc: "Wat moet ik nu doen?", cat: "Adviseur & acties",
     icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l2.5 2.5"/>',
     render: function (m, GAME) {
       var G = GAME.getState();
       var items = buildItems(G, "ext_actions");
-      var urgent = items.filter(function (i) { return i.sev === "urgent"; }).length;
-      m.innerHTML = U.topbar("Actiecentrum", "Je slimme assistent — data omgezet in acties") +
+      var urgent = items.filter(function (i) { return i.sev === "urgent"; });
+      var advies = items.filter(function (i) { return i.sev !== "urgent"; });
+      var html = U.topbar("Actiecentrum", "Je slimme assistent — data omgezet in acties") +
         '<div class="grid3">' +
-        '<div class="kpi"><div class="v" style="color:' + (urgent ? "var(--bad)" : "var(--accent)") + '">' + urgent + '</div><div class="l">Urgent</div></div>' +
-        '<div class="kpi"><div class="v">' + items.length + '</div><div class="l">Actiepunten</div></div>' +
-        '<div class="kpi"><div class="v">' + (items.length ? "" : "✓") + (items.length ? Math.max(0, items.length - urgent) : "") + '</div><div class="l">' + (items.length ? "Adviezen" : "Op orde") + '</div></div>' +
-        "</div>" +
-        '<div class="panel"><h3>📋 Aanbevolen acties</h3>' +
-        (items.length ? items.map(function (it) { return itemCard(it, false); }).join("") : "<p class='muted'>Alles op orde — geen openstaande acties. Speel je volgende wedstrijd!</p>") +
+        '<div class="kpi"><div class="v" style="color:' + (urgent.length ? "var(--bad)" : "var(--accent)") + '">' + urgent.length + '</div><div class="l">Urgent</div></div>' +
+        '<div class="kpi"><div class="v">' + advies.length + '</div><div class="l">Adviezen</div></div>' +
+        '<div class="kpi"><div class="v">' + (items.length || "✓") + '</div><div class="l">' + (items.length ? "Totaal" : "Op orde") + '</div></div>' +
         "</div>";
+      if (urgent.length) html += '<div class="panel"><div class="ac-sec-h u">🔴 Urgent — pak dit eerst op</div>' + urgent.map(itemCard).join("") + "</div>";
+      if (advies.length) html += '<div class="panel"><div class="ac-sec-h a">💡 Adviezen</div>' + advies.map(itemCard).join("") + "</div>";
+      if (!items.length) html += "<div class=\"panel\"><p class='muted'>Alles op orde — geen openstaande acties. Speel je volgende wedstrijd!</p></div>";
+      m.innerHTML = html;
     }
   });
 
-  // Dashboard-blok: top acties bovenaan je startpagina
   UI.ext.hook("dashboard", function (GAME) {
     try {
       var G = GAME.getState();
@@ -10537,8 +10531,8 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       var top = items.slice(0, 4);
       var more = items.length - top.length;
       return '<div class="panel"><div class="flexbar" style="margin-bottom:10px"><h3 style="margin:0">🧠 Actiecentrum</h3><span class="spacer"></span><button class="btn sm" onclick="UI.nav(\'ext_actions\')">Alles (' + items.length + ") ›</button></div>" +
-        top.map(function (it) { return itemCard(it, true); }).join("") +
-        (more > 0 ? '<div class="muted center" style="font-size:12px;margin-top:4px">+' + more + " meer in het Actiecentrum</div>" : "") +
+        top.map(itemCard).join("") +
+        (more > 0 ? '<div class="muted center" style="font-size:12px;margin-top:6px"><a onclick="UI.nav(\'ext_actions\')" style="cursor:pointer;color:var(--accent,#16e58f)">+' + more + " meer acties ›</a></div>" : "") +
         "</div>";
     } catch (e) { return ""; }
   });
