@@ -8111,7 +8111,7 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
       <div class="home-grid">
         <div class="home-main">
           <div class="panel feat-panel">${nextHtml}</div>
-          <div class="panel"><h3>Te doen</h3><div class="task-list">${taskHtml}</div></div>
+          ${extHtml("dashboard") || `<div class="panel"><h3>Te doen</h3><div class="task-list">${taskHtml}</div></div>`}
         </div>
         <div class="home-side">
           ${assistantPanel(G)}
@@ -8121,7 +8121,6 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
           <div class="panel"><h3>Laatste nieuws</h3><div class="news-feed">${newsFeed(G)}</div></div>
         </div>
       </div>
-      ${extHtml("dashboard")}
       ${dashTiles(G)}
       <div class="panel"><h3>Tussenstand (top 6)</h3>${miniTable(table.slice(0, 6), G, div)}</div>`;
   }
@@ -10475,6 +10474,27 @@ hr{border:none;border-top:1px solid var(--line);margin:6px 0}
     });
 
     try { var win = GAME.transferWindowOpen ? GAME.transferWindowOpen() : null; if (win && win.open && budget >= 8) items.push({ sev: "advies", emoji: "🟢", title: "Transferwindow is open", detail: "Je hebt " + U.fmtM(budget) + " te besteden (" + (win.name || "window") + ", sluit " + (win.closes || "binnenkort") + "). Versterk waar nodig.", actions: [{ label: "Naar transfers", onclick: "UI.nav('transfers')" }, { label: "Koopjes-radar", onclick: "UI.nav('ext_bargain_radar')" }] }); } catch (e) { }
+
+    // openstaande beslissing in de inbox
+    var dec = (G.inbox || []).filter(function (i) { return i.event && !i.decided; }).length;
+    if (dec) items.push({ sev: "urgent", emoji: "📨", title: "Beslissing vereist", detail: dec + " situatie" + (dec > 1 ? "s wachten" : " wacht") + " op je keuze in de inbox.", actions: [{ label: "Naar inbox", primary: true, onclick: "UI.nav('inbox')" }] });
+    // niet-inzetbare basisspelers
+    var unavail = (sq.xi || []).filter(function (id) { var p = sq.players[id]; return p && ((p.injuredWeeks || 0) > 0 || (p.suspended || 0) > 0); }).length;
+    if (unavail) items.push({ sev: "urgent", emoji: "🔧", title: "Opstelling aanpassen", detail: unavail + " basisspeler(s) niet inzetbaar (blessure/schorsing).", actions: [{ label: "Naar opstelling", primary: true, onclick: "UI.nav('squad')" }] });
+    // persconferentie
+    try { var pm = GAME.getNextUserMatch ? GAME.getNextUserMatch() : null; if (G.press && G.press.q && !G.press.done && pm && !pm.idle) items.push({ sev: "advies", emoji: "🎤", title: "Persconferentie", detail: "De media wacht op je reactie vóór de wedstrijd.", actions: [{ label: "Persco", primary: true, onclick: "UI.openPress&&UI.openPress()" }, { label: "Wedstrijd", onclick: "UI.nav('match')" }] }); } catch (e) { }
+    // jeugd-prospects om vast te leggen
+    var yp = (G.youth && G.youth.prospects) ? G.youth.prospects.length : 0;
+    if (yp) items.push({ sev: "advies", emoji: "⭐", title: "Jeugd-prospects beschikbaar", detail: yp + " talent(en) om vast te leggen voor de opleiding.", actions: [{ label: "Naar jeugd", onclick: "UI.nav('jeugd')" }] });
+    // scoutrapporten
+    var scoutN = (G.scouting && G.scouting.prospects) ? G.scouting.prospects.filter(function (id) { var p = G.players[id]; return p && (p.scoutKnow || 0) < 90; }).length : 0;
+    if (scoutN) items.push({ sev: "advies", emoji: "🔍", title: "Scoutrapporten", detail: scoutN + " naam/namen om verder te scouten.", actions: [{ label: "Naar scouting", onclick: "UI.nav('scouting')" }] });
+    // afgelopen sponsordeal
+    var cExp = G.commercial ? Object.keys(G.commercial).filter(function (k) { return G.commercial[k] && G.commercial[k].expired; }).length : 0;
+    if (cExp) items.push({ sev: "advies", emoji: "🤝", title: "Sponsordeal afgelopen", detail: cExp + " commerciële deal(s) opnieuw te onderhandelen.", actions: [{ label: "Naar financiën", onclick: "UI.nav('finances')" }] });
+    // tactiek nog niet ingesleten
+    var tf = (G.tactFamiliarity != null ? G.tactFamiliarity : 100);
+    if (tf < 55) items.push({ sev: "advies", emoji: "📋", title: "Tactiek nog niet ingesleten", detail: "Je team kent deze formatie pas " + Math.round(tf) + "% — speel & train om in te slijten.", actions: [{ label: "Naar tactiek", onclick: "UI.nav('tactics')" }] });
 
     items.sort(function (a, b) { return (a.sev === "urgent" ? 0 : 1) - (b.sev === "urgent" ? 0 : 1); });
     return items;
